@@ -1225,6 +1225,7 @@ export const useAppStore = create<AppState>()(
         autoStartRemovedInstanceName: config.settings.autoStartRemovedInstanceName,
         minimizeToTray: config.settings.minimizeToTray ?? false,
         onboardingCompleted: config.settings.onboardingCompleted ?? false,
+        autoCheckResourceUpdate: config.settings.autoCheckResourceUpdate ?? true,
         preActionConnectDelaySec: config.settings.preActionConnectDelaySec ?? 5,
         hotkeys: config.settings.hotkeys ?? {
           startTasks: 'F10',
@@ -1765,6 +1766,20 @@ export const useAppStore = create<AppState>()(
         autoInstallPending: false,
       }),
 
+    // 资源热更新状态
+    resourceVersion: null,
+    resourceUpdateStatus: 'idle',
+    resourceUpdateInfo: null,
+    resourceUpdateProgress: null,
+    resourceUpdateError: null,
+    autoCheckResourceUpdate: true,
+    setResourceVersion: (version) => set({ resourceVersion: version }),
+    setResourceUpdateStatus: (status) => set({ resourceUpdateStatus: status }),
+    setResourceUpdateInfo: (info) => set({ resourceUpdateInfo: info }),
+    setResourceUpdateProgress: (progress) => set({ resourceUpdateProgress: progress }),
+    setResourceUpdateError: (error) => set({ resourceUpdateError: error }),
+    setAutoCheckResourceUpdate: (enabled) => set({ autoCheckResourceUpdate: enabled }),
+
     // 最近关闭的实例
     recentlyClosed: [],
 
@@ -2055,6 +2070,7 @@ function generateConfig(): MxuConfig {
           autoStartRemovedInstanceName: state.autoStartRemovedInstanceName,
           minimizeToTray: state.minimizeToTray,
           onboardingCompleted: state.onboardingCompleted,
+          autoCheckResourceUpdate: state.autoCheckResourceUpdate,
           preActionConnectDelaySec: state.preActionConnectDelaySec,
           hotkeys: state.hotkeys,
         },

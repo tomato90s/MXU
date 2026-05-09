@@ -115,6 +115,8 @@ export default {
     autoClearLogsOnLaunch: '実行ログの自動クリア',
     autoClearLogsOnLaunchHint:
       'プロジェクトの起動時に自動で実行ログをクリアし、古いログファイルを削除します',
+    autoCheckResourceUpdate: '起動時にリソース更新を確認',
+    autoCheckResourceUpdateHint: 'プロジェクトの起動時に、スクリプトリソースの新しいバージョンを自動で確認します',
   },
 
   // 特殊タスク
@@ -692,6 +694,21 @@ export default {
       unknown: '不明なエラー ({{code}}): {{message}}',
       negative: 'サーバーエラーが発生しました。テクニカルサポートにお問い合わせください',
     },
+  },
+
+  // リソース更新
+  resourceUpdate: {
+    title: 'リソース更新',
+    check: 'リソースを確認',
+    newVersionAvailable: '新しいバージョン {{version}} が見つかりました',
+    currentVersion: '現在のバージョン {{version}}',
+    filesChanged: '{{count}} ファイルが変更されました',
+    updateNow: '今すぐ更新',
+    later: '後で',
+    downloading: 'リソースをダウンロード中...',
+    installing: 'リソースをインストール中...',
+    completed: 'リソース更新が完了しました',
+    errorTitle: 'リソース更新に失敗しました',
   },
 
   // スケジュール

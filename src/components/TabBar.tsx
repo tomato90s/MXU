@@ -27,6 +27,7 @@ import { ContextMenu, useContextMenu, type MenuItem } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { getInterfaceLangKey } from '@/i18n';
 import { exportWithToast } from '@/utils/tabExportImport';
+import { ResourceUpdateButton } from './ResourceUpdateButton';
 import clsx from 'clsx';
 
 const LazyUpdatePanel = lazy(async () => {
@@ -537,6 +538,7 @@ export function TabBar() {
             <History className="w-4 h-4" />
           </button>
         )}
+        <ResourceUpdateButton />
         <button
           onClick={toggleDashboardView}
           className={clsx(

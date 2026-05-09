@@ -159,6 +159,8 @@ export interface AppSettings {
   autoStartInstanceId?: string; // 启动后自动执行的实例 ID（为空或 undefined 表示不自动执行）
   autoRunOnLaunch?: boolean; // 非开机自启动的手动启动场景下，是否也自动执行选定的实例（默认 false）
   autoStartRemovedInstanceName?: string; // 被删除的自动执行配置名称（用于提示用户）
+  /** 启动时自动检查资源更新（默认 true） */
+  autoCheckResourceUpdate?: boolean;
   /** 前置动作轮询设备就绪后、连接前的额外延迟秒数（默认 5，仅通过编辑 mxu.json 修改） */
   preActionConnectDelaySec?: number;
 }

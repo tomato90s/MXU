@@ -75,6 +75,18 @@ export type DownloadStatus = 'idle' | 'downloading' | 'completed' | 'failed';
 // 安装状态类型
 export type InstallStatus = 'idle' | 'installing' | 'completed' | 'failed';
 
+// 资源更新状态类型
+export type ResourceUpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'installing' | 'completed' | 'error';
+
+// 资源更新信息
+export interface ResourceUpdateInfo {
+  version: string;
+  currentVersion: string;
+  filesChanged: number;
+  releaseNote?: string;
+  downloadUrl: string;
+}
+
 // 更新完成信息（重启后显示）
 export interface JustUpdatedInfo {
   previousVersion: string;
@@ -411,6 +423,20 @@ export interface AppState {
   setUpdateInfo: (info: UpdateInfo | null) => void;
   setUpdateCheckLoading: (loading: boolean) => void;
   setShowUpdateDialog: (show: boolean) => void;
+
+  // 资源热更新状态
+  resourceVersion: string | null;
+  resourceUpdateStatus: ResourceUpdateStatus;
+  resourceUpdateInfo: ResourceUpdateInfo | null;
+  resourceUpdateProgress: DownloadProgress | null;
+  resourceUpdateError: string | null;
+  autoCheckResourceUpdate: boolean;
+  setResourceVersion: (version: string | null) => void;
+  setResourceUpdateStatus: (status: ResourceUpdateStatus) => void;
+  setResourceUpdateInfo: (info: ResourceUpdateInfo | null) => void;
+  setResourceUpdateProgress: (progress: DownloadProgress | null) => void;
+  setResourceUpdateError: (error: string | null) => void;
+  setAutoCheckResourceUpdate: (enabled: boolean) => void;
 
   // 下载状态
   downloadStatus: DownloadStatus;

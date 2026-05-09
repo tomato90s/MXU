@@ -113,6 +113,8 @@ export default {
     resetWindowLayoutHint: '将窗口大小恢复为默认值，并居中显示',
     autoClearLogsOnLaunch: '自动清理运行日志',
     autoClearLogsOnLaunchHint: '每次启动项目时，自动清理运行日志并删除旧的日志文件',
+    autoCheckResourceUpdate: '启动时检查资源更新',
+    autoCheckResourceUpdateHint: '每次启动项目时，自动检查脚本资源是否有新版本',
   },
 
   // 特殊任务
@@ -676,6 +678,21 @@ export default {
       unknown: '未知错误 ({{code}}): {{message}}',
       negative: '服务器错误，请联系技术支持',
     },
+  },
+
+  // 资源更新
+  resourceUpdate: {
+    title: '资源更新',
+    check: '检查资源',
+    newVersionAvailable: '发现新版本 {{version}}',
+    currentVersion: '当前版本 {{version}}',
+    filesChanged: '共 {{count}} 个文件变更',
+    updateNow: '立即更新',
+    later: '稍后',
+    downloading: '正在下载资源...',
+    installing: '正在安装资源...',
+    completed: '资源更新完成',
+    errorTitle: '资源更新失败',
   },
 
   // 代理设置

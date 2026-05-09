@@ -112,6 +112,8 @@ export default {
     resetWindowLayoutHint: '將視窗大小恢復為預設值，並置中顯示',
     autoClearLogsOnLaunch: '自動清理運行日誌',
     autoClearLogsOnLaunchHint: '每次啟動項目時，自動清理運行日誌並刪除舊的日誌檔案',
+    autoCheckResourceUpdate: '啟動時檢查資源更新',
+    autoCheckResourceUpdateHint: '每次啟動項目時，自動檢查腳本資源是否有新版本',
   },
 
   // 特殊任務
@@ -672,6 +674,21 @@ export default {
       unknown: '未知錯誤 ({{code}}): {{message}}',
       negative: '服務器錯誤，請聯絡技術支援',
     },
+  },
+
+  // 資源更新
+  resourceUpdate: {
+    title: '資源更新',
+    check: '檢查資源',
+    newVersionAvailable: '發現新版本 {{version}}',
+    currentVersion: '當前版本 {{version}}',
+    filesChanged: '共 {{count}} 個文件變更',
+    updateNow: '立即更新',
+    later: '稍後',
+    downloading: '正在下載資源...',
+    installing: '正在安裝資源...',
+    completed: '資源更新完成',
+    errorTitle: '資源更新失敗',
   },
 
   // 定時執行

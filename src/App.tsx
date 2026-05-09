@@ -29,6 +29,10 @@ import {
   proxySettingsForUpdateDownload,
   stopInstanceTasksAndExitApp,
 } from '@/services';
+import {
+  checkResourceUpdate,
+  buildManifestUrl,
+} from '@/services/resourceUpdateService';
 import { loadIconAsDataUrl } from '@/services/contentResolver';
 import * as wsService from '@/services/wsService';
 import {
@@ -168,6 +172,7 @@ function App() {
     setBasePath,
     setDataPath,
     setConfigPersistenceReady,
+    setResourceVersion,
     basePath,
     importConfig,
     createInstance,
@@ -209,6 +214,7 @@ function App() {
       setBasePath: state.setBasePath,
       setDataPath: state.setDataPath,
       setConfigPersistenceReady: state.setConfigPersistenceReady,
+      setResourceVersion: state.setResourceVersion,
       basePath: state.basePath,
       importConfig: state.importConfig,
       createInstance: state.createInstance,
@@ -737,8 +743,37 @@ function App() {
 
       log.info('加载完成, 项目:', result.interface.name);
       setLoadingState('success');
+      // 设置当前资源版本号
+      setResourceVersion(result.interface.version || null);
       // 完成配置加载后，允许后续状态变更自动保存
       setConfigPersistenceReady(true);
+
+      // 自动检查资源更新（非阻塞）
+      if (result.interface.github && result.interface.version) {
+        const store = useAppStore.getState();
+        if (store.autoCheckResourceUpdate) {
+          setTimeout(() => {
+            const manifestUrl = buildManifestUrl(result.interface.github!);
+            checkResourceUpdate(manifestUrl, result.interface.version!)
+              .then((updateResult) => {
+                if (updateResult.hasUpdate) {
+                  log.info('发现资源更新:', updateResult.version);
+                  useAppStore.getState().setResourceUpdateStatus('available');
+                  useAppStore.getState().setResourceUpdateInfo({
+                    version: updateResult.version!,
+                    currentVersion: updateResult.currentVersion,
+                    filesChanged: updateResult.filesChanged ?? 0,
+                    releaseNote: updateResult.releaseNote,
+                    downloadUrl: updateResult.downloadUrl!,
+                  });
+                }
+              })
+              .catch((err) => {
+                log.warn('自动检查资源更新失败:', err);
+              });
+          }, 2000);
+        }
+      }
 
       // 浏览器环境：设置后端直连端口并建立 WebSocket 连接
       if (!isTauri() && result.webServerPort) {

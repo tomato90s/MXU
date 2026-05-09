@@ -41,6 +41,8 @@ export function GeneralSection() {
     autoStartRemovedInstanceName,
     autoClearLogsOnLaunch,
     setAutoClearLogsOnLaunch,
+    autoCheckResourceUpdate,
+    setAutoCheckResourceUpdate,
   } = useAppStore();
 
   // 开机自启动状态（直接从 Tauri 插件查询，不走 store）
@@ -324,6 +326,27 @@ export function GeneralSection() {
           <SwitchButton
             value={autoClearLogsOnLaunch}
             onChange={(v) => setAutoClearLogsOnLaunch(v)}
+          />
+        </div>
+      </div>
+
+      {/* 启动时自动检查资源更新 */}
+      <div className="bg-bg-secondary rounded-xl p-4 border border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Rocket className="w-5 h-5 text-accent" />
+            <div>
+              <span className="font-medium text-text-primary">
+                {t('settings.autoCheckResourceUpdate')}
+              </span>
+              <p className="text-xs text-text-muted mt-0.5">
+                {t('settings.autoCheckResourceUpdateHint')}
+              </p>
+            </div>
+          </div>
+          <SwitchButton
+            value={autoCheckResourceUpdate}
+            onChange={(v) => setAutoCheckResourceUpdate(v)}
           />
         </div>
       </div>

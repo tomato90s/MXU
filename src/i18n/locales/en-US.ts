@@ -117,6 +117,8 @@ export default {
     autoClearLogsOnLaunch: 'Auto-clear Runtime Logs',
     autoClearLogsOnLaunchHint:
       'Automatically clear runtime logs and delete old log files every time the project is launched',
+    autoCheckResourceUpdate: 'Check resource updates on launch',
+    autoCheckResourceUpdateHint: 'Automatically check for script resource updates when launching the project',
   },
 
   // Special tasks
@@ -693,6 +695,21 @@ export default {
       unknown: 'Unknown error ({{code}}): {{message}}',
       negative: 'Server error, please contact technical support',
     },
+  },
+
+  // Resource Update
+  resourceUpdate: {
+    title: 'Resource Update',
+    check: 'Check Resources',
+    newVersionAvailable: 'New version {{version}} available',
+    currentVersion: 'Current version {{version}}',
+    filesChanged: '{{count}} files changed',
+    updateNow: 'Update Now',
+    later: 'Later',
+    downloading: 'Downloading resources...',
+    installing: 'Installing resources...',
+    completed: 'Resource update completed',
+    errorTitle: 'Resource update failed',
   },
 
   // Schedule

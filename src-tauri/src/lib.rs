@@ -233,6 +233,9 @@ pub fn run() {
             // Agent 命令
             commands::maa_agent::maa_start_tasks,
             commands::maa_agent::maa_stop_agent,
+            // 资源热更新命令
+            commands::resource_update::check_resource_update,
+            commands::resource_update::apply_resource_update,
             // 文件操作命令
             commands::file_ops::read_local_file,
             commands::file_ops::read_local_file_base64,

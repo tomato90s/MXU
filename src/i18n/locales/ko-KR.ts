@@ -114,6 +114,8 @@ export default {
     autoClearLogsOnLaunch: '로그 자동 지우기',
     autoClearLogsOnLaunchHint:
       '프로젝트를 시작할 때 런타임 로그를 자동으로 지우고 이전 로그 파일을 삭제합니다',
+    autoCheckResourceUpdate: '시작 시 리소스 업데이트 확인',
+    autoCheckResourceUpdateHint: '프로젝트를 시작할 때 스크립트 리소스의 새 버전을 자동으로 확인합니다',
   },
 
   // 특수 작업
@@ -685,6 +687,21 @@ export default {
       unknown: '알 수 없는 오류 ({{code}}): {{message}}',
       negative: '서버 오류가 발생했습니다. 기술 지원에 문의하세요',
     },
+  },
+
+  // 리소스 업데이트
+  resourceUpdate: {
+    title: '리소스 업데이트',
+    check: '리소스 확인',
+    newVersionAvailable: '새 버전 {{version}} 사용 가능',
+    currentVersion: '현재 버전 {{version}}',
+    filesChanged: '{{count}}개 파일 변경됨',
+    updateNow: '지금 업데이트',
+    later: '나중에',
+    downloading: '리소스 다운로드 중...',
+    installing: '리소스 설치 중...',
+    completed: '리소스 업데이트 완료',
+    errorTitle: '리소스 업데이트 실패',
   },
 
   // 예약
