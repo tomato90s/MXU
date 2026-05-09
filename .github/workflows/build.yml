@@ -5,7 +5,8 @@ on:
     tags:
       - "v*"
     branches:
-      - "**"
+      - "main"
+      - "custom"
     paths:
       - ".github/workflows/build.yml"
       - "src/**"
@@ -16,7 +17,8 @@ on:
 
   pull_request:
     branches:
-      - "**"
+      - "main"
+      - "custom"
     paths:
       - ".github/workflows/build.yml"
       - "src/**"
@@ -26,6 +28,16 @@ on:
       - "vite.config.ts"
 
   workflow_dispatch:
+    inputs:
+      version:
+        description: "版本号 (如 0.2.1-custom.1)，留空则不发布 Release"
+        required: false
+        default: ""
+      prerelease:
+        description: "是否为预发布版本"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   meta:
@@ -33,7 +45,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
-      is-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      is-release: ${{ steps.version.outputs.is-release }}
+      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,15 +54,36 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          IS_RELEASE="false"
+          IS_PRERELEASE="false"
+
+          # 1. workflow_dispatch 手动输入版本号
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG="v${{ github.event.inputs.version }}"
+            IS_RELEASE="true"
+            if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+              IS_PRERELEASE="true"
+            fi
+          # 2. tag 触发
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
             TAG="${GITHUB_REF#refs/tags/}"
+            IS_RELEASE="true"
+            # 自动检测预发布版本（tag 包含 -alpha, -beta, -rc, -dev）
+            if [[ "$TAG" =~ -(alpha|beta|rc|dev|preview|pre) ]]; then
+              IS_PRERELEASE="true"
+            fi
           else
             VERSION="0.0.0-dev"
             TAG="dev"
           fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "is-release=$IS_RELEASE" >> $GITHUB_OUTPUT
+          echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION, Tag: $TAG, Release: $IS_RELEASE, Prerelease: $IS_PRERELEASE"
 
   windows:
     needs: meta
@@ -329,10 +363,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.meta.outputs.tag }}
-          name: Release ${{ needs.meta.outputs.tag }}
+          name: Release ${{ needs.meta.outputs.tag }} (custom fork)
           draft: false
-          prerelease: false
-          body: ${{ needs.changelog.outputs.release_body }}
+          prerelease: ${{ needs.meta.outputs.is-prerelease == 'true' }}
+          body: |
+            ${{ needs.changelog.outputs.release_body }}
+
+            ---
+            > 此版本基于 [MXU](https://github.com/MistEO/MXU) 的 custom fork 构建。
           files: |
             artifacts/*.zip
             artifacts/*.tar.gz
