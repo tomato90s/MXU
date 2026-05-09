@@ -3,7 +3,6 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { loggers } from '@/utils/logger';
-import type { DownloadProgress } from '@/stores/appStore';
 
 const log = loggers.app;
 
