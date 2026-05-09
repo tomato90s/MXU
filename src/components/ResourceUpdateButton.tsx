@@ -47,7 +47,7 @@ export function ResourceUpdateButton() {
           <RefreshCw className="w-3.5 h-3.5" />
         )}
         <span>
-          {resourceVersion ? `v${resourceVersion}` : t('resourceUpdate.check')}
+          {resourceVersion ?? t('resourceUpdate.check')}
         </span>
         {hasUpdate && (
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
