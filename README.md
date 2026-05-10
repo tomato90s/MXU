@@ -10,6 +10,36 @@
 
 预构建二进制（Windows / Linux / macOS）见 **[Releases · tomato90s/MXU](https://github.com/tomato90s/MXU/releases)**。macOS 当前发布为单文件 `mxu` 压缩包（未打 `.app`/`.dmg`），使用方式见下文「依赖文件」。
 
+## 本仓库新增功能（用户向）
+
+### 脚本资源热更新（基于 `resource-manifest.json`）
+
+本仓库支持在程序内检查并更新脚本资源（`interface.json` + `resource/` 等），不依赖 `mirrorchyan_rid`。
+
+用户侧使用方式：
+
+- 点击顶部版本号可打开「资源更新」弹窗，并**立即检查**远端资源版本
+- 若发现新版本，可直接下载并应用资源更新
+- 支持“GitHub 镜像前缀”开关（默认开启），用于网络较慢时加速访问
+
+要让资源更新生效，项目发布时需满足以下条件：
+
+1. `interface.json` 中包含：
+   - `github`：项目仓库地址（例如 `https://github.com/yourname/yourproject`）
+   - `version`：当前本地资源版本（例如 `v0.1.20`）
+2. 该仓库 Latest Release 的 Assets 中包含：
+   - `resource-manifest.json`
+   - 资源更新包（通常是 zip）
+3. `resource-manifest.json` 至少包含以下字段：
+   - `version`：远端资源版本号
+   - `update_url`：资源更新包下载链接
+   - `files`：资源文件列表（用于统计变更数量）
+
+更新判断说明：
+
+- 当 `resource-manifest.json` 的 `version` 与本地 `interface.json` 的 `version` 不一致时，会提示可更新
+- 一致时会显示“当前已是最新资源”
+
 ## ✨ 特性
 
 > [!TIP]
