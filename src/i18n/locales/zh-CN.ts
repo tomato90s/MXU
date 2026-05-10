@@ -684,6 +684,10 @@ export default {
   resourceUpdate: {
     title: '资源更新',
     check: '检查资源',
+    checkingManifest: '正在从远程获取 resource-manifest.json…',
+    upToDate: '当前资源已与远程 manifest 中的版本一致，无需更新。',
+    missingGithub: 'interface.json 中未配置 github 或 version，无法进行资源更新检查。',
+    retryCheck: '重新检查',
     newVersionAvailable: '发现新版本 {{version}}',
     currentVersion: '当前版本 {{version}}',
     filesChanged: '共 {{count}} 个文件变更',

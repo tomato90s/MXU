@@ -1,9 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Download, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Download, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
-import { applyResourceUpdate } from '@/services/resourceUpdateService';
+import {
+  applyResourceUpdate,
+  buildManifestUrl,
+  checkResourceUpdate,
+} from '@/services/resourceUpdateService';
 import { autoLoadInterface } from '@/services/interfaceLoader';
 import { loggers } from '@/utils/logger';
 
@@ -21,6 +25,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
     resourceUpdateInfo,
     resourceUpdateError,
     setResourceUpdateStatus,
+    setResourceUpdateInfo,
     setResourceUpdateError,
   } = useAppStore(
     useShallow((state) => ({
@@ -28,9 +33,70 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
       resourceUpdateInfo: state.resourceUpdateInfo,
       resourceUpdateError: state.resourceUpdateError,
       setResourceUpdateStatus: state.setResourceUpdateStatus,
+      setResourceUpdateInfo: state.setResourceUpdateInfo,
       setResourceUpdateError: state.setResourceUpdateError,
     })),
   );
+
+  /** 打开弹窗后拉取 manifest；与「自动检查」解耦，避免无信息时白屏 */
+  const [manifestPhase, setManifestPhase] = useState<'loading' | 'ready'>('loading');
+  const [manifestError, setManifestError] = useState<string | null>(null);
+
+  const runManifestCheck = useCallback(
+    async (signal?: { cancelled: boolean }) => {
+      setManifestError(null);
+      setManifestPhase('loading');
+      setResourceUpdateError(null);
+      setResourceUpdateInfo(null);
+      setResourceUpdateStatus('checking');
+
+      const pi = useAppStore.getState().projectInterface;
+      if (!pi?.github?.trim() || !pi?.version) {
+        if (signal?.cancelled) return;
+        setResourceUpdateInfo(null);
+        setResourceUpdateStatus('idle');
+        setManifestError(t('resourceUpdate.missingGithub'));
+        setManifestPhase('ready');
+        return;
+      }
+
+      try {
+        const manifestUrl = buildManifestUrl(pi.github);
+        const result = await checkResourceUpdate(manifestUrl, pi.version);
+        if (signal?.cancelled) return;
+        if (result.hasUpdate) {
+          setResourceUpdateInfo({
+            version: result.version!,
+            currentVersion: result.currentVersion,
+            filesChanged: result.filesChanged ?? 0,
+            releaseNote: result.releaseNote,
+            downloadUrl: result.downloadUrl!,
+          });
+          setResourceUpdateStatus('available');
+        } else {
+          setResourceUpdateInfo(null);
+          setResourceUpdateStatus('idle');
+        }
+        setManifestPhase('ready');
+      } catch (err) {
+        if (signal?.cancelled) return;
+        log.warn('资源更新检查失败:', err);
+        setResourceUpdateInfo(null);
+        setResourceUpdateStatus('idle');
+        setManifestError(err instanceof Error ? err.message : String(err));
+        setManifestPhase('ready');
+      }
+    },
+    [setResourceUpdateError, setResourceUpdateInfo, setResourceUpdateStatus, t],
+  );
+
+  useEffect(() => {
+    const sig = { cancelled: false };
+    void runManifestCheck(sig);
+    return () => {
+      sig.cancelled = true;
+    };
+  }, [runManifestCheck]);
 
   const handleUpdate = useCallback(async () => {
     if (!resourceUpdateInfo) return;
@@ -70,6 +136,17 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
   const isCompleted = resourceUpdateStatus === 'completed';
   const isError = resourceUpdateStatus === 'error';
 
+  const showManifestLoading = manifestPhase === 'loading' && !isUpdating && !isCompleted && !isError;
+  const showManifestFetchError =
+    manifestPhase === 'ready' && manifestError && !isUpdating && !isCompleted && !isError;
+  const showNoUpdate =
+    manifestPhase === 'ready' &&
+    !manifestError &&
+    !resourceUpdateInfo &&
+    !isUpdating &&
+    !isCompleted &&
+    !isError;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-bg-primary rounded-lg shadow-lg border border-border w-full max-w-md mx-4 overflow-hidden">
@@ -94,8 +171,58 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
 
         {/* 内容区 */}
         <div className="px-4 py-4 space-y-4">
-          {/* 确认模式 */}
-          {!isUpdating && !isCompleted && !isError && resourceUpdateInfo && (
+          {showManifestLoading && (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <Loader2 className="w-8 h-8 animate-spin text-accent" />
+              <p className="text-sm text-text-secondary text-center">
+                {t('resourceUpdate.checkingManifest')}
+              </p>
+            </div>
+          )}
+
+          {showManifestFetchError && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                <p className="text-sm text-text-primary break-words">{manifestError}</p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => void runManifestCheck()}
+                  className="px-4 py-2 rounded-md text-sm bg-accent text-white hover:bg-accent-hover transition-colors inline-flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  {t('resourceUpdate.retryCheck')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showNoUpdate && (
+            <div className="py-2 space-y-4">
+              <p className="text-sm text-text-secondary">
+                {t('resourceUpdate.upToDate')}
+              </p>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void runManifestCheck()}
+                  className="px-4 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-hover transition-colors inline-flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  {t('resourceUpdate.retryCheck')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 确认模式（manifest 检查结束后再展示，避免与 loading 叠闪） */}
+          {!isUpdating &&
+            !isCompleted &&
+            !isError &&
+            manifestPhase === 'ready' &&
+            resourceUpdateInfo && (
             <>
               <div className="space-y-2">
                 <p className="text-text-primary">

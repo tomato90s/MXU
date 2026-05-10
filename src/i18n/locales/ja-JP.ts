@@ -700,6 +700,11 @@ export default {
   resourceUpdate: {
     title: 'リソース更新',
     check: 'リソースを確認',
+    checkingManifest: 'resource-manifest.json を取得しています…',
+    upToDate: 'ローカルリソースはリモートの manifest と一致しており、更新は不要です。',
+    missingGithub:
+      'interface.json に github または version がないため、リソース更新を確認できません。',
+    retryCheck: '再確認',
     newVersionAvailable: '新しいバージョン {{version}} が見つかりました',
     currentVersion: '現在のバージョン {{version}}',
     filesChanged: '{{count}} ファイルが変更されました',

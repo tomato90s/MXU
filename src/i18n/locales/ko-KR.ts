@@ -693,6 +693,11 @@ export default {
   resourceUpdate: {
     title: '리소스 업데이트',
     check: '리소스 확인',
+    checkingManifest: 'resource-manifest.json을 가져오는 중…',
+    upToDate: '로컬 리소스가 원격 manifest 버전과 일치합니다. 업데이트가 필요 없습니다.',
+    missingGithub:
+      'interface.json에 github 또는 version이 없어 리소스 업데이트를 확인할 수 없습니다.',
+    retryCheck: '다시 확인',
     newVersionAvailable: '새 버전 {{version}} 사용 가능',
     currentVersion: '현재 버전 {{version}}',
     filesChanged: '{{count}}개 파일 변경됨',

@@ -701,6 +701,11 @@ export default {
   resourceUpdate: {
     title: 'Resource Update',
     check: 'Check Resources',
+    checkingManifest: 'Fetching resource-manifest.json…',
+    upToDate: 'Your local resources already match the remote manifest; nothing to update.',
+    missingGithub:
+      'interface.json is missing github or version, so resource updates cannot be checked.',
+    retryCheck: 'Check again',
     newVersionAvailable: 'New version {{version}} available',
     currentVersion: 'Current version {{version}}',
     filesChanged: '{{count}} files changed',
