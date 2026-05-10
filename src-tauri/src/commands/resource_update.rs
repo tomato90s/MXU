@@ -16,6 +16,7 @@ const DEFAULT_MIRROR_PREFIXES: &[&str] = &[
 
 /// 资源更新检查结果
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ResourceUpdateCheckResult {
     pub has_update: bool,
     pub version: Option<String>,

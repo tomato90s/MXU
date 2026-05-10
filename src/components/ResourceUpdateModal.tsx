@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Download, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
@@ -42,18 +42,29 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
   /** 打开弹窗后拉取 manifest；与「自动检查」解耦，避免无信息时白屏 */
   const [manifestPhase, setManifestPhase] = useState<'loading' | 'ready'>('loading');
   const [manifestError, setManifestError] = useState<string | null>(null);
+  // 递增请求序号，防止旧请求结果覆盖新请求状态
+  const checkSeqRef = useRef(0);
 
   const runManifestCheck = useCallback(
     async (signal?: { cancelled: boolean }) => {
+      const requestSeq = ++checkSeqRef.current;
+      const isStale = () => requestSeq !== checkSeqRef.current;
       setManifestError(null);
       setManifestPhase('loading');
       setResourceUpdateError(null);
-      setResourceUpdateInfo(null);
       setResourceUpdateStatus('checking');
 
-      const pi = useAppStore.getState().projectInterface;
+      const st0 = useAppStore.getState();
+      const pi = st0.projectInterface;
+      const prevInfo = st0.resourceUpdateInfo;
       if (!pi?.github?.trim() || !pi?.version) {
-        if (signal?.cancelled) return;
+        if (signal?.cancelled || isStale()) return;
+        // 若已有“有更新”信息，避免被缺字段检查覆盖
+        if (prevInfo && prevInfo.version !== prevInfo.currentVersion) {
+          setResourceUpdateStatus('available');
+          setManifestPhase('ready');
+          return;
+        }
         setResourceUpdateInfo(null);
         setResourceUpdateStatus('idle');
         setManifestError(t('resourceUpdate.missingGithub'));
@@ -69,7 +80,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
           resourceUpdateMirrorPrefix: st.resourceUpdateMirrorPrefix,
         });
         const result = await checkResourceUpdate(manifestUrl, pi.version, mirrorPrefixes);
-        if (signal?.cancelled) return;
+        if (signal?.cancelled || isStale()) return;
         if (result.hasUpdate) {
           setResourceUpdateInfo({
             version: result.version!,
@@ -80,13 +91,25 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
           });
           setResourceUpdateStatus('available');
         } else {
+          // 防止“后到的无更新”覆盖“先到的有更新”（常见于并发检查/镜像缓存差异）
+          if (prevInfo && prevInfo.version !== prevInfo.currentVersion) {
+            setResourceUpdateStatus('available');
+            setManifestPhase('ready');
+            return;
+          }
           setResourceUpdateInfo(null);
           setResourceUpdateStatus('idle');
         }
         setManifestPhase('ready');
       } catch (err) {
-        if (signal?.cancelled) return;
+        if (signal?.cancelled || isStale()) return;
         log.warn('资源更新检查失败:', err);
+        // 失败时保留已有更新信息，避免误判为“无更新”
+        if (prevInfo && prevInfo.version !== prevInfo.currentVersion) {
+          setResourceUpdateStatus('available');
+          setManifestPhase('ready');
+          return;
+        }
         setResourceUpdateInfo(null);
         setResourceUpdateStatus('idle');
         setManifestError(err instanceof Error ? err.message : String(err));
