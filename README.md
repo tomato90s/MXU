@@ -4,6 +4,12 @@
 
 它可以解析任何符合 PI V2 标准的 `interface.json` 文件，为 MaaFramework 生态中的自动化项目提供开箱即用的图形界面。
 
+## 本仓库说明（Fork）
+
+本仓库从上游 [MistEO/MXU](https://github.com/MistEO/MXU) fork。**默认分支为 [`custom`](https://github.com/tomato90s/MXU/tree/custom)**：日常开发、CI 与发版均以此分支为准；合并上游更新时可在 `main` 与 `custom` 之间按需同步。
+
+预构建二进制（Windows / Linux / macOS）见 **[Releases · tomato90s/MXU](https://github.com/tomato90s/MXU/releases)**。macOS 当前发布为单文件 `mxu` 压缩包（未打 `.app`/`.dmg`），使用方式见下文「依赖文件」。
+
 ## ✨ 特性
 
 > [!TIP]
@@ -25,7 +31,7 @@
 
 ### 依赖文件
 
-[MXU Releases](https://github.com/MistEO/MXU/releases) 中提供了单可执行文件（Windows 为 `mxu.exe`，Linux/macOS 为 `mxu`），您需要配置以下依赖：
+[本仓库 Releases](https://github.com/tomato90s/MXU/releases) 中提供了单可执行文件（Windows 为 `mxu.exe`，Linux/macOS 为 `mxu`），您需要配置以下依赖：
 
 - [MaaFramework](https://github.com/MaaXYZ/MaaFramework/releases) 运行库 ( >= `v5.5.0-beta.1` ) ，将压缩包中的 `bin` 文件夹内容解压到 `maafw` 文件夹中
 - [interface.json](https://github.com/MaaXYZ/MaaFramework/blob/main/sample/interface.json) 及相关资源文件，请参考 [PI 协议文档](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-ProjectInterfaceV2%E5%8D%8F%E8%AE%AE.md) 编写
@@ -151,11 +157,13 @@ _说白了就是：怎么写、合什么，主要看维护者顺不顺眼、普�
 
 ## ❤️ 鸣谢
 
-感谢以下开发者对 MXU 作出的贡献：
+感谢上游 [MistEO/MXU](https://github.com/MistEO/MXU) 及本 fork 的贡献者：
 
-[![贡献者](https://contrib.rocks/image?repo=MistEO/MXU&max=1000)](https://github.com/MistEO/MXU/graphs/contributors)
+[![贡献者](https://contrib.rocks/image?repo=tomato90s/MXU&max=1000)](https://github.com/tomato90s/MXU/graphs/contributors)
 
 ## ☕ 赞助
+
+以下为上游项目维护者的赞助入口：
 
 <!-- markdownlint-disable MD033 MD045 -->
 <a href="https://afdian.com/a/misteo">
