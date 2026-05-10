@@ -7,25 +7,11 @@ on:
     branches:
       - "main"
       - "custom"
-    paths:
-      - ".github/workflows/build.yml"
-      - "src/**"
-      - "src-tauri/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "vite.config.ts"
 
   pull_request:
     branches:
       - "main"
       - "custom"
-    paths:
-      - ".github/workflows/build.yml"
-      - "src/**"
-      - "src-tauri/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "vite.config.ts"
 
   workflow_dispatch:
     inputs:
@@ -363,14 +349,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.meta.outputs.tag }}
-          name: Release ${{ needs.meta.outputs.tag }} (custom fork)
+          name: Release ${{ needs.meta.outputs.tag }}
           draft: false
           prerelease: ${{ needs.meta.outputs.is-prerelease == 'true' }}
           body: |
             ${{ needs.changelog.outputs.release_body }}
-
-            ---
-            > 此版本基于 [MXU](https://github.com/MistEO/MXU) 的 custom fork 构建。
           files: |
             artifacts/*.zip
             artifacts/*.tar.gz
