@@ -305,15 +305,45 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Avoid orhun/git-cliff-action single-shot curl to GitHub Releases (502s are common).
+      - name: Install git-cliff
+        run: |
+          set -euo pipefail
+          GC_VER="2.13.1"
+          TARBALL="git-cliff-${GC_VER}-x86_64-unknown-linux-gnu.tar.gz"
+          URL="https://github.com/orhun/git-cliff/releases/download/v${GC_VER}/${TARBALL}"
+          for attempt in 1 2 3 4 5 6; do
+            rm -f "/tmp/${TARBALL}"
+            if curl -fL --connect-timeout 30 --max-time 180 \
+              --retry 8 --retry-all-errors --retry-delay 5 \
+              -o "/tmp/${TARBALL}" "$URL"; then
+              break
+            fi
+            echo "git-cliff download failed (attempt ${attempt}), backing off..."
+            sleep $((attempt * 20))
+          done
+          test -s "/tmp/${TARBALL}"
+          EXTRACT="/tmp/git-cliff-extract"
+          rm -rf "$EXTRACT"
+          mkdir -p "$EXTRACT"
+          tar -xzf "/tmp/${TARBALL}" -C "$EXTRACT"
+          BIN="$(find "$EXTRACT" -type f -name git-cliff | head -1)"
+          test -n "$BIN" && test -x "$BIN"
+          sudo install -m 755 "$BIN" /usr/local/bin/git-cliff
+          git-cliff --version
+
       - name: Generate a changelog
-        uses: orhun/git-cliff-action@v4
         id: git-cliff
-        with:
-          config: .github/cliff.toml
-          args: -vv --latest --strip header
         env:
-          OUTPUT: CHANGES.md
           GITHUB_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git-cliff -vv --latest --strip header --config .github/cliff.toml > CHANGES.md
+          {
+            echo 'content<<CLIFF_EOF'
+            cat CHANGES.md
+            echo 'CLIFF_EOF'
+          } >> "$GITHUB_OUTPUT"
 
   release:
     if: ${{ needs.meta.outputs.is-release == 'true' }}
