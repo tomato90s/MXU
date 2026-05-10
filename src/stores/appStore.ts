@@ -1226,6 +1226,11 @@ export const useAppStore = create<AppState>()(
         minimizeToTray: config.settings.minimizeToTray ?? false,
         onboardingCompleted: config.settings.onboardingCompleted ?? false,
         autoCheckResourceUpdate: config.settings.autoCheckResourceUpdate ?? true,
+        resourceUpdateUseGithubMirrors: config.settings.resourceUpdateUseGithubMirrors ?? true,
+        resourceUpdateMirrorPrefix:
+          config.settings.resourceUpdateMirrorPrefix ||
+          config.settings.resourceUpdateMirrorPrefixes?.[0] ||
+          'https://gh-proxy.com/',
         preActionConnectDelaySec: config.settings.preActionConnectDelaySec ?? 5,
         hotkeys: config.settings.hotkeys ?? {
           startTasks: 'F10',
@@ -1773,12 +1778,17 @@ export const useAppStore = create<AppState>()(
     resourceUpdateProgress: null,
     resourceUpdateError: null,
     autoCheckResourceUpdate: true,
+    resourceUpdateUseGithubMirrors: true,
+    resourceUpdateMirrorPrefix: 'https://gh-proxy.com/',
     setResourceVersion: (version) => set({ resourceVersion: version }),
     setResourceUpdateStatus: (status) => set({ resourceUpdateStatus: status }),
     setResourceUpdateInfo: (info) => set({ resourceUpdateInfo: info }),
     setResourceUpdateProgress: (progress) => set({ resourceUpdateProgress: progress }),
     setResourceUpdateError: (error) => set({ resourceUpdateError: error }),
     setAutoCheckResourceUpdate: (enabled) => set({ autoCheckResourceUpdate: enabled }),
+    setResourceUpdateUseGithubMirrors: (enabled) =>
+      set({ resourceUpdateUseGithubMirrors: enabled }),
+    setResourceUpdateMirrorPrefix: (prefix) => set({ resourceUpdateMirrorPrefix: prefix }),
 
     // 最近关闭的实例
     recentlyClosed: [],
@@ -2071,6 +2081,8 @@ function generateConfig(): MxuConfig {
           minimizeToTray: state.minimizeToTray,
           onboardingCompleted: state.onboardingCompleted,
           autoCheckResourceUpdate: state.autoCheckResourceUpdate,
+          resourceUpdateUseGithubMirrors: state.resourceUpdateUseGithubMirrors,
+          resourceUpdateMirrorPrefix: state.resourceUpdateMirrorPrefix.trim() || undefined,
           preActionConnectDelaySec: state.preActionConnectDelaySec,
           hotkeys: state.hotkeys,
         },

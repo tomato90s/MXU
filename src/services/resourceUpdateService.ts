@@ -6,6 +6,28 @@ import { loggers } from '@/utils/logger';
 
 const log = loggers.app;
 
+/** 默认资源更新镜像前缀 */
+export const DEFAULT_RESOURCE_UPDATE_MIRROR_PREFIX = 'https://gh-proxy.com/';
+
+export interface ResourceUpdateMirrorSettings {
+  resourceUpdateUseGithubMirrors?: boolean;
+  resourceUpdateMirrorPrefix?: string;
+}
+
+/**
+ * 解析为传给 Rust 的前缀列表：开启镜像时优先镜像，再回落直连。
+ */
+export function getResourceUpdateMirrorPrefixList(
+  settings: ResourceUpdateMirrorSettings,
+): string[] {
+  if (settings.resourceUpdateUseGithubMirrors === false) {
+    return [''];
+  }
+  const raw = (settings.resourceUpdateMirrorPrefix || DEFAULT_RESOURCE_UPDATE_MIRROR_PREFIX).trim();
+  const normalized = raw.endsWith('/') ? raw : `${raw}/`;
+  return [normalized, ''];
+}
+
 /** 资源更新检查结果 */
 export interface ResourceUpdateCheckResult {
   hasUpdate: boolean;
@@ -31,12 +53,14 @@ export function buildManifestUrl(githubUrl: string): string {
 export async function checkResourceUpdate(
   manifestUrl: string,
   currentVersion: string,
+  mirrorPrefixes: string[],
 ): Promise<ResourceUpdateCheckResult> {
   log.info('检查资源更新:', manifestUrl, '当前版本:', currentVersion);
   try {
     const result = await invoke<ResourceUpdateCheckResult>('check_resource_update', {
       manifestUrl,
       currentVersion,
+      mirrorPrefixes,
     });
     return result;
   } catch (err) {
@@ -53,12 +77,14 @@ export async function checkResourceUpdate(
 export async function applyResourceUpdate(
   downloadUrl: string,
   manifest: object,
+  mirrorPrefixes: string[],
 ): Promise<void> {
   log.info('应用资源更新:', downloadUrl);
   try {
     await invoke('apply_resource_update', {
       downloadUrl,
       manifest,
+      mirrorPrefixes,
     });
     log.info('资源更新应用成功');
   } catch (err) {

@@ -115,6 +115,12 @@ export default {
     autoClearLogsOnLaunchHint: '每次启动项目时，自动清理运行日志并删除旧的日志文件',
     autoCheckResourceUpdate: '启动时检查资源更新',
     autoCheckResourceUpdateHint: '每次启动项目时，自动检查脚本资源是否有新版本',
+    resourceUpdateGithubMirrors: '资源更新使用 GitHub 加速镜像',
+    resourceUpdateGithubMirrorsHint:
+      '拉取 resource-manifest 与资源包时，在直连失败或超时后依次尝试前缀镜像。关闭后仅直连，适合网络稳定或需固定出口的环境。',
+    resourceUpdateMirrorPrefixes: '镜像前缀（可编辑）',
+    resourceUpdateMirrorPrefixesHint:
+      '填写一个完整 URL 前缀（建议以 / 结尾）；留空则使用默认 gh-proxy。开启后会优先尝试该前缀，失败再回落直连。',
   },
 
   // 特殊任务

@@ -431,12 +431,18 @@ export interface AppState {
   resourceUpdateProgress: DownloadProgress | null;
   resourceUpdateError: string | null;
   autoCheckResourceUpdate: boolean;
+  /** 资源更新是否使用 GitHub 镜像前缀（与内置或可编辑列表） */
+  resourceUpdateUseGithubMirrors: boolean;
+  /** 自定义镜像前缀；为空时使用默认 gh-proxy */
+  resourceUpdateMirrorPrefix: string;
   setResourceVersion: (version: string | null) => void;
   setResourceUpdateStatus: (status: ResourceUpdateStatus) => void;
   setResourceUpdateInfo: (info: ResourceUpdateInfo | null) => void;
   setResourceUpdateProgress: (progress: DownloadProgress | null) => void;
   setResourceUpdateError: (error: string | null) => void;
   setAutoCheckResourceUpdate: (enabled: boolean) => void;
+  setResourceUpdateUseGithubMirrors: (enabled: boolean) => void;
+  setResourceUpdateMirrorPrefix: (prefix: string) => void;
 
   // 下载状态
   downloadStatus: DownloadStatus;

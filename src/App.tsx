@@ -31,6 +31,7 @@ import {
 } from '@/services';
 import {
   checkResourceUpdate,
+  getResourceUpdateMirrorPrefixList,
   buildManifestUrl,
 } from '@/services/resourceUpdateService';
 import { loadIconAsDataUrl } from '@/services/contentResolver';
@@ -754,7 +755,12 @@ function App() {
         if (store.autoCheckResourceUpdate) {
           setTimeout(() => {
             const manifestUrl = buildManifestUrl(result.interface.github!);
-            checkResourceUpdate(manifestUrl, result.interface.version!)
+            const s = useAppStore.getState();
+            const mirrorPrefixes = getResourceUpdateMirrorPrefixList({
+              resourceUpdateUseGithubMirrors: s.resourceUpdateUseGithubMirrors,
+              resourceUpdateMirrorPrefix: s.resourceUpdateMirrorPrefix,
+            });
+            checkResourceUpdate(manifestUrl, result.interface.version!, mirrorPrefixes)
               .then((updateResult) => {
                 if (updateResult.hasUpdate) {
                   log.info('发现资源更新:', updateResult.version);

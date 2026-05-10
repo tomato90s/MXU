@@ -8,12 +8,10 @@ use std::path::PathBuf;
 
 use super::utils::get_exe_directory;
 
-const MIRROR_PREFIXES: &[&str] = &[
+/// 内置 GitHub 加速前缀（与前端 DEFAULT_RESOURCE_UPDATE_MIRROR_PREFIXES 一致）
+const DEFAULT_MIRROR_PREFIXES: &[&str] = &[
     "",
     "https://gh-proxy.com/",
-    "https://v6.gh-proxy.org/",
-    "https://fastly.gh-proxy.org/",
-    "https://edgeone.gh-proxy.org/",
 ];
 
 /// 资源更新检查结果
@@ -42,13 +40,14 @@ struct ResourceManifest {
 pub async fn check_resource_update(
     manifest_url: String,
     current_version: String,
+    mirror_prefixes: Vec<String>,
 ) -> Result<ResourceUpdateCheckResult, String> {
     info!(
         "检查资源更新: manifest={}, current={}",
         manifest_url, current_version
     );
 
-    let manifest = fetch_manifest(&manifest_url).await?;
+    let manifest = fetch_manifest(&manifest_url, &mirror_prefixes).await?;
     let remote_version = manifest.version;
 
     // 版本号简单字符串对比（资源版本通常不需要 semver 语义化比较）
@@ -89,6 +88,7 @@ pub async fn check_resource_update(
 pub async fn apply_resource_update(
     download_url: String,
     manifest: serde_json::Value,
+    mirror_prefixes: Vec<String>,
 ) -> Result<(), String> {
     info!("应用资源更新: {}", download_url);
 
@@ -104,7 +104,7 @@ pub async fn apply_resource_update(
         .map_err(|e| format!("无法创建缓存目录: {}", e))?;
 
     // 2. 下载 zip（支持多镜像）
-    download_resource_zip(&download_url, &zip_path).await?;
+    download_resource_zip(&download_url, &zip_path, &mirror_prefixes).await?;
     info!("资源包下载完成: {}", zip_path.display());
 
     // 3. 解压到临时子目录
@@ -174,11 +174,22 @@ pub async fn apply_resource_update(
 // 内部辅助函数
 // ------------------------------------------------------------------
 
+fn effective_mirror_prefixes(mirror_prefixes: &[String]) -> Vec<String> {
+    if mirror_prefixes.is_empty() {
+        return DEFAULT_MIRROR_PREFIXES.iter().map(|s| (*s).to_string()).collect();
+    }
+    mirror_prefixes.to_vec()
+}
+
 /// 从远程获取 manifest（支持多镜像重试）
-async fn fetch_manifest(manifest_url: &str) -> Result<ResourceManifest, String> {
+async fn fetch_manifest(
+    manifest_url: &str,
+    mirror_prefixes: &[String],
+) -> Result<ResourceManifest, String> {
+    let prefixes = effective_mirror_prefixes(mirror_prefixes);
     let mut last_error: Option<String> = None;
 
-    for prefix in MIRROR_PREFIXES {
+    for prefix in &prefixes {
         let url = format!("{}{}", prefix, manifest_url);
         let client = match reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
@@ -232,10 +243,15 @@ async fn fetch_manifest(manifest_url: &str) -> Result<ResourceManifest, String> 
 }
 
 /// 下载资源 zip 包（支持多镜像重试）
-async fn download_resource_zip(url: &str, save_path: &PathBuf) -> Result<(), String> {
+async fn download_resource_zip(
+    url: &str,
+    save_path: &PathBuf,
+    mirror_prefixes: &[String],
+) -> Result<(), String> {
+    let prefixes = effective_mirror_prefixes(mirror_prefixes);
     let mut last_error: Option<String> = None;
 
-    for prefix in MIRROR_PREFIXES {
+    for prefix in &prefixes {
         let mirror_url = format!("{}{}", prefix, url);
         let client = match reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(300))

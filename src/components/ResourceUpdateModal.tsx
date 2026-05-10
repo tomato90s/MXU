@@ -7,6 +7,7 @@ import {
   applyResourceUpdate,
   buildManifestUrl,
   checkResourceUpdate,
+  getResourceUpdateMirrorPrefixList,
 } from '@/services/resourceUpdateService';
 import { autoLoadInterface } from '@/services/interfaceLoader';
 import { loggers } from '@/utils/logger';
@@ -62,7 +63,12 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
 
       try {
         const manifestUrl = buildManifestUrl(pi.github);
-        const result = await checkResourceUpdate(manifestUrl, pi.version);
+        const st = useAppStore.getState();
+        const mirrorPrefixes = getResourceUpdateMirrorPrefixList({
+          resourceUpdateUseGithubMirrors: st.resourceUpdateUseGithubMirrors,
+          resourceUpdateMirrorPrefix: st.resourceUpdateMirrorPrefix,
+        });
+        const result = await checkResourceUpdate(manifestUrl, pi.version, mirrorPrefixes);
         if (signal?.cancelled) return;
         if (result.hasUpdate) {
           setResourceUpdateInfo({
@@ -106,9 +112,15 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
 
     try {
       setResourceUpdateStatus('installing');
+      const st = useAppStore.getState();
+      const mirrorPrefixes = getResourceUpdateMirrorPrefixList({
+        resourceUpdateUseGithubMirrors: st.resourceUpdateUseGithubMirrors,
+        resourceUpdateMirrorPrefix: st.resourceUpdateMirrorPrefix,
+      });
       await applyResourceUpdate(
         resourceUpdateInfo.downloadUrl,
         resourceUpdateInfo,
+        mirrorPrefixes,
       );
       setResourceUpdateStatus('completed');
 

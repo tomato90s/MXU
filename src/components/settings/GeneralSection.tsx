@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { DEFAULT_RESOURCE_UPDATE_MIRROR_PREFIX } from '@/services/resourceUpdateService';
 import { useTranslation } from 'react-i18next';
 import {
   Settings2,
@@ -9,6 +10,7 @@ import {
   Power,
   Play,
   Rocket,
+  Globe,
   ChevronDown,
   Check,
   BrushCleaning,
@@ -43,6 +45,10 @@ export function GeneralSection() {
     setAutoClearLogsOnLaunch,
     autoCheckResourceUpdate,
     setAutoCheckResourceUpdate,
+    resourceUpdateUseGithubMirrors,
+    setResourceUpdateUseGithubMirrors,
+    resourceUpdateMirrorPrefix,
+    setResourceUpdateMirrorPrefix,
   } = useAppStore();
 
   // 开机自启动状态（直接从 Tauri 插件查询，不走 store）
@@ -331,7 +337,7 @@ export function GeneralSection() {
       </div>
 
       {/* 启动时自动检查资源更新 */}
-      <div className="bg-bg-secondary rounded-xl p-4 border border-border">
+      <div className="bg-bg-secondary rounded-xl p-4 border border-border space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Rocket className="w-5 h-5 text-accent" />
@@ -348,6 +354,41 @@ export function GeneralSection() {
             value={autoCheckResourceUpdate}
             onChange={(v) => setAutoCheckResourceUpdate(v)}
           />
+        </div>
+
+        <div className="pt-3 border-t border-border space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Globe className="w-5 h-5 text-accent shrink-0" />
+              <div className="min-w-0">
+                <span className="font-medium text-text-primary">
+                  {t('settings.resourceUpdateGithubMirrors')}
+                </span>
+                <p className="text-xs text-text-muted mt-0.5">
+                  {t('settings.resourceUpdateGithubMirrorsHint')}
+                </p>
+              </div>
+            </div>
+            <SwitchButton
+              value={resourceUpdateUseGithubMirrors}
+              onChange={(v) => setResourceUpdateUseGithubMirrors(v)}
+            />
+          </div>
+          {resourceUpdateUseGithubMirrors && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-secondary">
+                {t('settings.resourceUpdateMirrorPrefixes')}
+              </label>
+              <input
+                value={resourceUpdateMirrorPrefix}
+                onChange={(e) => setResourceUpdateMirrorPrefix(e.target.value)}
+                placeholder={DEFAULT_RESOURCE_UPDATE_MIRROR_PREFIX}
+                spellCheck={false}
+                className="w-full px-3 py-2 rounded-lg bg-bg-tertiary border border-border text-sm text-text-primary placeholder:text-text-muted font-mono focus:outline-none focus:ring-2 focus:ring-accent/50"
+              />
+              <p className="text-xs text-text-muted">{t('settings.resourceUpdateMirrorPrefixesHint')}</p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -114,6 +114,12 @@ export default {
     autoClearLogsOnLaunchHint: '每次啟動項目時，自動清理運行日誌並刪除舊的日誌檔案',
     autoCheckResourceUpdate: '啟動時檢查資源更新',
     autoCheckResourceUpdateHint: '每次啟動項目時，自動檢查腳本資源是否有新版本',
+    resourceUpdateGithubMirrors: '資源更新使用 GitHub 加速鏡像',
+    resourceUpdateGithubMirrorsHint:
+      '取得 resource-manifest 與資源包時，在直連失敗或逾時後依序嘗試前綴鏡像。關閉後僅直連。',
+    resourceUpdateMirrorPrefixes: '自訂鏡像前綴（可選）',
+    resourceUpdateMirrorPrefixesHint:
+      '每行一個完整 URL 前綴（建議以 / 結尾）；留空則使用 MXU 內建列表。會先嘗試直連，再嘗試下列前綴。',
   },
 
   // 特殊任務

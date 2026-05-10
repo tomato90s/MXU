@@ -161,6 +161,18 @@ export interface AppSettings {
   autoStartRemovedInstanceName?: string; // 被删除的自动执行配置名称（用于提示用户）
   /** 启动时自动检查资源更新（默认 true） */
   autoCheckResourceUpdate?: boolean;
+  /**
+   * 资源热更新（resource-manifest）是否启用 GitHub 加速前缀重试（默认 true）。
+   * 关闭后仅直连原始 URL。
+   */
+  resourceUpdateUseGithubMirrors?: boolean;
+  /**
+   * 自定义单个加速前缀（如 https://gh-proxy.com/）。
+   * 为空且开启镜像时，使用默认值 https://gh-proxy.com/。
+   */
+  resourceUpdateMirrorPrefix?: string;
+  /** @deprecated 兼容旧配置：多前缀列表，仅在读取历史配置时使用首个值 */
+  resourceUpdateMirrorPrefixes?: string[];
   /** 前置动作轮询设备就绪后、连接前的额外延迟秒数（默认 5，仅通过编辑 mxu.json 修改） */
   preActionConnectDelaySec?: number;
 }

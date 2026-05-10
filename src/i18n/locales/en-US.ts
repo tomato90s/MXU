@@ -119,6 +119,12 @@ export default {
       'Automatically clear runtime logs and delete old log files every time the project is launched',
     autoCheckResourceUpdate: 'Check resource updates on launch',
     autoCheckResourceUpdateHint: 'Automatically check for script resource updates when launching the project',
+    resourceUpdateGithubMirrors: 'Use GitHub mirror prefixes for resource updates',
+    resourceUpdateGithubMirrorsHint:
+      'When fetching resource-manifest and the resource zip, retry with mirror URL prefixes after failures or timeouts. Turn off to use direct GitHub only.',
+    resourceUpdateMirrorPrefixes: 'Mirror prefix (editable)',
+    resourceUpdateMirrorPrefixesHint:
+      'Set one full URL prefix (trailing / recommended). Leave empty to use default gh-proxy. When enabled, this prefix is tried first, then direct GitHub as fallback.',
   },
 
   // Special tasks

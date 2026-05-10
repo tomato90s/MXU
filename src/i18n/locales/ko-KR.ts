@@ -116,6 +116,12 @@ export default {
       '프로젝트를 시작할 때 런타임 로그를 자동으로 지우고 이전 로그 파일을 삭제합니다',
     autoCheckResourceUpdate: '시작 시 리소스 업데이트 확인',
     autoCheckResourceUpdateHint: '프로젝트를 시작할 때 스크립트 리소스의 새 버전을 자동으로 확인합니다',
+    resourceUpdateGithubMirrors: '리소스 업데이트에 GitHub 미러 접두사 사용',
+    resourceUpdateGithubMirrorsHint:
+      'resource-manifest 및 ZIP 다운로드 시 실패·시간 초과 후 미러 URL 접두사를 순서대로 시도합니다. 끄면 직접 연결만 사용합니다.',
+    resourceUpdateMirrorPrefixes: '사용자 지정 미러 접두사(선택)',
+    resourceUpdateMirrorPrefixesHint:
+      '줄마다 전체 URL 접두사(끝에 / 권장). 비우면 내장 목록을 씁니다. 먼저 직접 연결 후 아래 접두사를 시도합니다.',
   },
 
   // 특수 작업

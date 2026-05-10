@@ -117,6 +117,12 @@ export default {
       'プロジェクトの起動時に自動で実行ログをクリアし、古いログファイルを削除します',
     autoCheckResourceUpdate: '起動時にリソース更新を確認',
     autoCheckResourceUpdateHint: 'プロジェクトの起動時に、スクリプトリソースの新しいバージョンを自動で確認します',
+    resourceUpdateGithubMirrors: 'リソース更新で GitHub ミラープレフィックスを使う',
+    resourceUpdateGithubMirrorsHint:
+      'resource-manifest と ZIP の取得で、失敗・タイムアウト後にミラー URL へ順にリトライします。オフにすると直リンクのみです。',
+    resourceUpdateMirrorPrefixes: 'カスタムミラープレフィックス（任意）',
+    resourceUpdateMirrorPrefixesHint:
+      '1 行に 1 つの完全な URL プレフィックス（末尾 / 推奨）。空欄なら組み込みリスト。まず直リンク、次に各行を試します。',
   },
 
   // 特殊タスク
