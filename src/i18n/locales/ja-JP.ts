@@ -116,7 +116,8 @@ export default {
     autoClearLogsOnLaunchHint:
       'プロジェクトの起動時に自動で実行ログをクリアし、古いログファイルを削除します',
     autoCheckResourceUpdate: '起動時にリソース更新を確認',
-    autoCheckResourceUpdateHint: 'プロジェクトの起動時に、スクリプトリソースの新しいバージョンを自動で確認します',
+    autoCheckResourceUpdateHint:
+      'プロジェクトの起動時に、スクリプトリソースの新しいバージョンを自動で確認します',
     resourceUpdateGithubMirrors: 'リソース更新で GitHub ミラープレフィックスを使う',
     resourceUpdateGithubMirrorsHint:
       'resource-manifest と ZIP の取得で、失敗・タイムアウト後にミラー URL へ順にリトライします。オフにすると直リンクのみです。',

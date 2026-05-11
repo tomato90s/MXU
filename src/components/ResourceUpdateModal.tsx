@@ -140,11 +140,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
         resourceUpdateUseGithubMirrors: st.resourceUpdateUseGithubMirrors,
         resourceUpdateMirrorPrefix: st.resourceUpdateMirrorPrefix,
       });
-      await applyResourceUpdate(
-        resourceUpdateInfo.downloadUrl,
-        resourceUpdateInfo,
-        mirrorPrefixes,
-      );
+      await applyResourceUpdate(resourceUpdateInfo.downloadUrl, resourceUpdateInfo, mirrorPrefixes);
       setResourceUpdateStatus('completed');
 
       // 重新加载 interface.json
@@ -171,7 +167,8 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
   const isCompleted = resourceUpdateStatus === 'completed';
   const isError = resourceUpdateStatus === 'error';
 
-  const showManifestLoading = manifestPhase === 'loading' && !isUpdating && !isCompleted && !isError;
+  const showManifestLoading =
+    manifestPhase === 'loading' && !isUpdating && !isCompleted && !isError;
   const showManifestFetchError =
     manifestPhase === 'ready' && manifestError && !isUpdating && !isCompleted && !isError;
   const showNoUpdate =
@@ -236,9 +233,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
 
           {showNoUpdate && (
             <div className="py-2 space-y-4">
-              <p className="text-sm text-text-secondary">
-                {t('resourceUpdate.upToDate')}
-              </p>
+              <p className="text-sm text-text-secondary">{t('resourceUpdate.upToDate')}</p>
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -258,43 +253,43 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
             !isError &&
             manifestPhase === 'ready' &&
             resourceUpdateInfo && (
-            <>
-              <div className="space-y-2">
-                <p className="text-text-primary">
-                  {t('resourceUpdate.newVersionAvailable', {
-                    version: resourceUpdateInfo.version,
-                  })}
-                </p>
-                <p className="text-sm text-text-secondary">
-                  {t('resourceUpdate.currentVersion', {
-                    version: resourceUpdateInfo.currentVersion,
-                  })}
-                </p>
-                {resourceUpdateInfo.filesChanged !== undefined && (
-                  <p className="text-sm text-text-secondary">
-                    {t('resourceUpdate.filesChanged', {
-                      count: resourceUpdateInfo.filesChanged,
+              <>
+                <div className="space-y-2">
+                  <p className="text-text-primary">
+                    {t('resourceUpdate.newVersionAvailable', {
+                      version: resourceUpdateInfo.version,
                     })}
                   </p>
-                )}
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-hover transition-colors"
-                >
-                  {t('common.later')}
-                </button>
-                <button
-                  onClick={handleUpdate}
-                  className="px-4 py-2 rounded-md text-sm bg-accent text-white hover:bg-accent-hover transition-colors flex items-center gap-1.5"
-                >
-                  <Download className="w-4 h-4" />
-                  {t('resourceUpdate.updateNow')}
-                </button>
-              </div>
-            </>
-          )}
+                  <p className="text-sm text-text-secondary">
+                    {t('resourceUpdate.currentVersion', {
+                      version: resourceUpdateInfo.currentVersion,
+                    })}
+                  </p>
+                  {resourceUpdateInfo.filesChanged !== undefined && (
+                    <p className="text-sm text-text-secondary">
+                      {t('resourceUpdate.filesChanged', {
+                        count: resourceUpdateInfo.filesChanged,
+                      })}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-hover transition-colors"
+                  >
+                    {t('common.later')}
+                  </button>
+                  <button
+                    onClick={handleUpdate}
+                    className="px-4 py-2 rounded-md text-sm bg-accent text-white hover:bg-accent-hover transition-colors flex items-center gap-1.5"
+                  >
+                    <Download className="w-4 h-4" />
+                    {t('resourceUpdate.updateNow')}
+                  </button>
+                </div>
+              </>
+            )}
 
           {/* 更新中 */}
           {isUpdating && (

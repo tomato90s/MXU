@@ -10,11 +10,7 @@ export function ResourceUpdateButton() {
   const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
 
-  const {
-    resourceVersion,
-    resourceUpdateStatus,
-    resourceUpdateInfo,
-  } = useAppStore(
+  const { resourceVersion, resourceUpdateStatus, resourceUpdateInfo } = useAppStore(
     useShallow((state) => ({
       resourceVersion: state.resourceVersion,
       resourceUpdateStatus: state.resourceUpdateStatus,
@@ -46,17 +42,11 @@ export function ResourceUpdateButton() {
         ) : (
           <RefreshCw className="w-3.5 h-3.5" />
         )}
-        <span>
-          {resourceVersion ?? t('resourceUpdate.check')}
-        </span>
-        {hasUpdate && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
-        )}
+        <span>{resourceVersion ?? t('resourceUpdate.check')}</span>
+        {hasUpdate && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />}
       </button>
 
-      {showModal && (
-        <ResourceUpdateModal onClose={() => setShowModal(false)} />
-      )}
+      {showModal && <ResourceUpdateModal onClose={() => setShowModal(false)} />}
     </>
   );
 }
