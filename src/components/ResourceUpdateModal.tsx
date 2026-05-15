@@ -73,7 +73,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
       }
 
       try {
-        const manifestUrl = buildManifestUrl(pi.github);
+        const manifestUrl = await buildManifestUrl(pi.github);
         const st = useAppStore.getState();
         const mirrorPrefixes = getResourceUpdateMirrorPrefixList({
           resourceUpdateUseGithubMirrors: st.resourceUpdateUseGithubMirrors,

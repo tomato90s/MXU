@@ -753,8 +753,8 @@ function App() {
       if (result.interface.github && result.interface.version) {
         const store = useAppStore.getState();
         if (store.autoCheckResourceUpdate) {
-          setTimeout(() => {
-            const manifestUrl = buildManifestUrl(result.interface.github!);
+          setTimeout(async () => {
+            const manifestUrl = await buildManifestUrl(result.interface.github!);
             const s = useAppStore.getState();
             const mirrorPrefixes = getResourceUpdateMirrorPrefixList({
               resourceUpdateUseGithubMirrors: s.resourceUpdateUseGithubMirrors,

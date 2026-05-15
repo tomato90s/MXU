@@ -3,6 +3,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { loggers } from '@/utils/logger';
+import { isTauri } from '@/utils/paths';
 
 const log = loggers.app;
 
@@ -38,11 +39,35 @@ export interface ResourceUpdateCheckResult {
   downloadUrl?: string;
 }
 
-/** 从 GitHub 仓库 URL 构建资源 manifest URL */
-export function buildManifestUrl(githubUrl: string): string {
-  // 去除尾部斜杠
+/**
+ * 获取当前平台标签，格式与 CI artifact 名称一致（如 win-x86_64, macos-aarch64）。
+ * 优先通过 Tauri 命令获取精确值，浏览器环境回退到 navigator 判断。
+ */
+async function getPlatformTag(): Promise<string> {
+  if (isTauri()) {
+    try {
+      const [os, arch] = await Promise.all([
+        invoke<string>('get_os'),
+        invoke<string>('get_arch'),
+      ]);
+      const osTag = os === 'windows' ? 'win' : os === 'macos' ? 'macos' : os;
+      const archTag = arch === 'x86_64' ? 'x86_64' : arch === 'aarch64' ? 'aarch64' : arch;
+      return `${osTag}-${archTag}`;
+    } catch {
+      // fallback
+    }
+  }
+  const ua = navigator.platform.toLowerCase();
+  const os = ua.includes('win') ? 'win' : ua.includes('mac') ? 'macos' : 'linux';
+  return `${os}-x86_64`;
+}
+
+/** 从 GitHub 仓库 URL 构建资源 manifest URL（带平台后缀） */
+export async function buildManifestUrl(githubUrl: string): Promise<string> {
   const cleanUrl = githubUrl.replace(/\/$/, '');
-  return `${cleanUrl}/releases/latest/download/resource-manifest.json`;
+  const platform = await getPlatformTag();
+  log.info('资源更新平台标签:', platform);
+  return `${cleanUrl}/releases/latest/download/resource-manifest-${platform}.json`;
 }
 
 /**
