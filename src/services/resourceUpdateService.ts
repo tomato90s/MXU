@@ -47,10 +47,7 @@ export interface ResourceUpdateCheckResult {
 async function getPlatformTag(): Promise<string> {
   if (isTauri()) {
     try {
-      const [os, arch] = await Promise.all([
-        invoke<string>('get_os'),
-        invoke<string>('get_arch'),
-      ]);
+      const [os, arch] = await Promise.all([invoke<string>('get_os'), invoke<string>('get_arch')]);
       const osTag = os === 'windows' ? 'win' : os === 'macos' ? 'macos' : os;
       const archTag = arch === 'x86_64' ? 'x86_64' : arch === 'aarch64' ? 'aarch64' : arch;
       return `${osTag}-${archTag}`;
@@ -122,12 +119,9 @@ export async function applyResourceUpdate(
 
   try {
     // 监听 Rust 端的下载进度事件
-    unlisten = await listen<ResourceUpdateProgressEvent>(
-      'resource-update-progress',
-      (event) => {
-        onProgress?.(event.payload);
-      },
-    );
+    unlisten = await listen<ResourceUpdateProgressEvent>('resource-update-progress', (event) => {
+      onProgress?.(event.payload);
+    });
 
     await invoke('apply_resource_update', {
       downloadUrl,

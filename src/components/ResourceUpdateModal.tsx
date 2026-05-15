@@ -178,7 +178,12 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
       setResourceUpdateStatus('error');
       setResourceUpdateError(err instanceof Error ? err.message : String(err));
     }
-  }, [resourceUpdateInfo, setResourceUpdateStatus, setResourceUpdateError, setResourceUpdateProgress]);
+  }, [
+    resourceUpdateInfo,
+    setResourceUpdateStatus,
+    setResourceUpdateError,
+    setResourceUpdateProgress,
+  ]);
 
   const isUpdating =
     resourceUpdateStatus === 'downloading' || resourceUpdateStatus === 'installing';
@@ -318,10 +323,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
                 showActions={false}
               />
               {downloadUrl && (
-                <p
-                  className="text-xs text-text-muted break-all select-all"
-                  title={downloadUrl}
-                >
+                <p className="text-xs text-text-muted break-all select-all" title={downloadUrl}>
                   {downloadUrl}
                 </p>
               )}

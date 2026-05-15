@@ -358,8 +358,8 @@ async fn download_resource_zip(
 
         // 流式下载
         let mut stream = response.bytes_stream();
-        let mut file = std::fs::File::create(save_path)
-            .map_err(|e| format!("创建 zip 文件失败: {}", e))?;
+        let mut file =
+            std::fs::File::create(save_path).map_err(|e| format!("创建 zip 文件失败: {}", e))?;
         let mut downloaded: u64 = 0;
         let mut download_err: Option<String> = None;
 
@@ -402,7 +402,11 @@ async fn download_resource_zip(
             },
         );
 
-        info!("资源包下载完成: {} bytes -> {}", downloaded, save_path.display());
+        info!(
+            "资源包下载完成: {} bytes -> {}",
+            downloaded,
+            save_path.display()
+        );
         return Ok(());
     }
 
