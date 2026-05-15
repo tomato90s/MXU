@@ -9,10 +9,7 @@ use std::path::PathBuf;
 use super::utils::get_exe_directory;
 
 /// 内置 GitHub 加速前缀（与前端 DEFAULT_RESOURCE_UPDATE_MIRROR_PREFIXES 一致）
-const DEFAULT_MIRROR_PREFIXES: &[&str] = &[
-    "",
-    "https://gh-proxy.com/",
-];
+const DEFAULT_MIRROR_PREFIXES: &[&str] = &["", "https://gh-proxy.com/"];
 
 /// 资源更新检查结果
 #[derive(Serialize, Debug, Clone)]
@@ -101,8 +98,7 @@ pub async fn apply_resource_update(
     if cache_dir.exists() {
         let _ = std::fs::remove_dir_all(&cache_dir);
     }
-    std::fs::create_dir_all(&cache_dir)
-        .map_err(|e| format!("无法创建缓存目录: {}", e))?;
+    std::fs::create_dir_all(&cache_dir).map_err(|e| format!("无法创建缓存目录: {}", e))?;
 
     // 2. 下载 zip（支持多镜像）
     download_resource_zip(&download_url, &zip_path, &mirror_prefixes).await?;
@@ -110,8 +106,7 @@ pub async fn apply_resource_update(
 
     // 3. 解压到临时子目录
     let extract_dir = cache_dir.join("extracted");
-    std::fs::create_dir_all(&extract_dir)
-        .map_err(|e| format!("无法创建解压目录: {}", e))?;
+    std::fs::create_dir_all(&extract_dir).map_err(|e| format!("无法创建解压目录: {}", e))?;
 
     super::update::extract_zip(
         zip_path.to_string_lossy().to_string(),
@@ -120,8 +115,8 @@ pub async fn apply_resource_update(
     info!("资源包解压完成");
 
     // 4. 遍历解压后的内容，覆盖到项目根目录
-    let entries = std::fs::read_dir(&extract_dir)
-        .map_err(|e| format!("读取解压目录失败: {}", e))?;
+    let entries =
+        std::fs::read_dir(&extract_dir).map_err(|e| format!("读取解压目录失败: {}", e))?;
 
     for entry in entries {
         let entry = entry.map_err(|e| format!("读取目录条目失败: {}", e))?;
@@ -158,8 +153,8 @@ pub async fn apply_resource_update(
 
     // 5. 写入新的 .manifest.json
     let manifest_path = root_dir.join(".manifest.json");
-    let manifest_json =
-        serde_json::to_string_pretty(&manifest).map_err(|e| format!("序列化 manifest 失败: {}", e))?;
+    let manifest_json = serde_json::to_string_pretty(&manifest)
+        .map_err(|e| format!("序列化 manifest 失败: {}", e))?;
     std::fs::write(&manifest_path, manifest_json)
         .map_err(|e| format!("写入 manifest 失败: {}", e))?;
     info!("manifest 已更新: {}", manifest_path.display());
@@ -177,7 +172,10 @@ pub async fn apply_resource_update(
 
 fn effective_mirror_prefixes(mirror_prefixes: &[String]) -> Vec<String> {
     if mirror_prefixes.is_empty() {
-        return DEFAULT_MIRROR_PREFIXES.iter().map(|s| (*s).to_string()).collect();
+        return DEFAULT_MIRROR_PREFIXES
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
     }
     mirror_prefixes.to_vec()
 }

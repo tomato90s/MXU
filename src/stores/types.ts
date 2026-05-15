@@ -76,7 +76,14 @@ export type DownloadStatus = 'idle' | 'downloading' | 'completed' | 'failed';
 export type InstallStatus = 'idle' | 'installing' | 'completed' | 'failed';
 
 // 资源更新状态类型
-export type ResourceUpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'installing' | 'completed' | 'error';
+export type ResourceUpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'installing'
+  | 'completed'
+  | 'error';
 
 // 资源更新信息
 export interface ResourceUpdateInfo {

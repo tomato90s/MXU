@@ -386,7 +386,9 @@ export function GeneralSection() {
                 spellCheck={false}
                 className="w-full px-3 py-2 rounded-lg bg-bg-tertiary border border-border text-sm text-text-primary placeholder:text-text-muted font-mono focus:outline-none focus:ring-2 focus:ring-accent/50"
               />
-              <p className="text-xs text-text-muted">{t('settings.resourceUpdateMirrorPrefixesHint')}</p>
+              <p className="text-xs text-text-muted">
+                {t('settings.resourceUpdateMirrorPrefixesHint')}
+              </p>
             </div>
           )}
         </div>
