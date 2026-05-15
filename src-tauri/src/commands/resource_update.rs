@@ -2,9 +2,14 @@
 //!
 //! 提供脚本资源（interface.json + resource/）的独立更新能力
 
+use futures_util::StreamExt;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use tauri::Emitter;
 
 use super::utils::get_exe_directory;
 
@@ -29,6 +34,17 @@ struct ResourceManifest {
     version: String,
     update_url: String,
     files: serde_json::Value,
+}
+
+/// 资源下载进度事件
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceUpdateProgressEvent {
+    pub url: String,
+    pub downloaded_size: u64,
+    pub total_size: u64,
+    pub speed: u64,
+    pub progress: f64,
 }
 
 /// 检查资源更新
@@ -84,6 +100,7 @@ pub async fn check_resource_update(
 /// 下载 zip 资源包，解压覆盖到项目根目录，更新 .manifest.json
 #[tauri::command]
 pub async fn apply_resource_update(
+    app: tauri::AppHandle,
     download_url: String,
     manifest: serde_json::Value,
     mirror_prefixes: Vec<String>,
@@ -100,8 +117,8 @@ pub async fn apply_resource_update(
     }
     std::fs::create_dir_all(&cache_dir).map_err(|e| format!("无法创建缓存目录: {}", e))?;
 
-    // 2. 下载 zip（支持多镜像）
-    download_resource_zip(&download_url, &zip_path, &mirror_prefixes).await?;
+    // 2. 下载 zip（支持多镜像 + 进度上报）
+    download_resource_zip(&app, &download_url, &zip_path, &mirror_prefixes).await?;
     info!("资源包下载完成: {}", zip_path.display());
 
     // 3. 解压到临时子目录
@@ -241,8 +258,9 @@ async fn fetch_manifest(
     Err(last_error.unwrap_or_else(|| "所有镜像均无法下载 manifest".to_string()))
 }
 
-/// 下载资源 zip 包（支持多镜像重试）
+/// 下载资源 zip 包（支持多镜像重试 + 流式进度上报）
 async fn download_resource_zip(
+    app: &tauri::AppHandle,
     url: &str,
     save_path: &PathBuf,
     mirror_prefixes: &[String],
@@ -279,16 +297,112 @@ async fn download_resource_zip(
             continue;
         }
 
-        let bytes = match response.bytes().await {
-            Ok(b) => b,
-            Err(e) => {
-                warn!("zip 读取失败 ({}): {}", mirror_url, e);
-                last_error = Some(format!("读取失败: {}", e));
-                continue;
-            }
-        };
+        let total = response.content_length().unwrap_or(0);
+        let downloaded_shared = Arc::new(AtomicU64::new(0));
+        let downloaded_clone = downloaded_shared.clone();
 
-        std::fs::write(save_path, bytes).map_err(|e| format!("写入 zip 文件失败: {}", e))?;
+        // 进度上报定时器
+        let app_clone = app.clone();
+        let url_for_progress = mirror_url.clone();
+        let progress_handle = tokio::spawn(async move {
+            let mut last_downloaded: u64 = 0;
+            let mut last_instant = tokio::time::Instant::now();
+            let mut smoothed_speed: f64 = 0.0;
+            const EMA_ALPHA: f64 = 0.3;
+
+            let mut interval = tokio::time::interval(Duration::from_millis(300));
+            loop {
+                interval.tick().await;
+                let now = tokio::time::Instant::now();
+                let downloaded = downloaded_clone.load(Ordering::Relaxed);
+
+                let elapsed = now - last_instant;
+                if elapsed.as_millis() < 100 {
+                    continue;
+                }
+
+                let bytes_in_interval = downloaded.saturating_sub(last_downloaded);
+                let instant_speed = if elapsed.as_secs_f64() > 0.0 {
+                    bytes_in_interval as f64 / elapsed.as_secs_f64()
+                } else {
+                    0.0
+                };
+
+                smoothed_speed = if smoothed_speed == 0.0 {
+                    instant_speed
+                } else {
+                    EMA_ALPHA * instant_speed + (1.0 - EMA_ALPHA) * smoothed_speed
+                };
+
+                let progress = if total > 0 {
+                    ((downloaded as f64 / total as f64) * 100.0).min(100.0)
+                } else {
+                    0.0
+                };
+
+                let _ = app_clone.emit(
+                    "resource-update-progress",
+                    ResourceUpdateProgressEvent {
+                        url: url_for_progress.clone(),
+                        downloaded_size: downloaded,
+                        total_size: total,
+                        speed: smoothed_speed as u64,
+                        progress,
+                    },
+                );
+
+                last_downloaded = downloaded;
+                last_instant = now;
+            }
+        });
+
+        // 流式下载
+        let mut stream = response.bytes_stream();
+        let mut file = std::fs::File::create(save_path)
+            .map_err(|e| format!("创建 zip 文件失败: {}", e))?;
+        let mut downloaded: u64 = 0;
+        let mut download_err: Option<String> = None;
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = match chunk {
+                Ok(c) => c,
+                Err(e) => {
+                    download_err = Some(format!("下载数据失败: {}", e));
+                    break;
+                }
+            };
+
+            use std::io::Write;
+            if let Err(e) = file.write_all(&chunk) {
+                download_err = Some(format!("写入数据失败: {}", e));
+                break;
+            }
+            downloaded += chunk.len() as u64;
+            downloaded_shared.store(downloaded, Ordering::Relaxed);
+        }
+
+        // 停止进度上报
+        progress_handle.abort();
+
+        if let Some(err) = download_err {
+            let _ = std::fs::remove_file(save_path);
+            last_error = Some(err);
+            continue;
+        }
+
+        // 发送最终进度 100%
+        let _ = app.emit(
+            "resource-update-progress",
+            ResourceUpdateProgressEvent {
+                url: mirror_url,
+                downloaded_size: downloaded,
+                total_size: if total > 0 { total } else { downloaded },
+                speed: 0,
+                progress: 100.0,
+            },
+        );
+
+        info!("资源包下载完成: {} bytes -> {}", downloaded, save_path.display());
         return Ok(());
     }
 

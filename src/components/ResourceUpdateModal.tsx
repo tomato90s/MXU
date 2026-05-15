@@ -11,6 +11,7 @@ import {
 } from '@/services/resourceUpdateService';
 import { autoLoadInterface } from '@/services/interfaceLoader';
 import { loggers } from '@/utils/logger';
+import { DownloadProgressBar } from './UpdateInfoCard';
 
 interface ResourceUpdateModalProps {
   onClose: () => void;
@@ -24,17 +25,21 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
   const {
     resourceUpdateStatus,
     resourceUpdateInfo,
+    resourceUpdateProgress,
     resourceUpdateError,
     setResourceUpdateStatus,
     setResourceUpdateInfo,
+    setResourceUpdateProgress,
     setResourceUpdateError,
   } = useAppStore(
     useShallow((state) => ({
       resourceUpdateStatus: state.resourceUpdateStatus,
       resourceUpdateInfo: state.resourceUpdateInfo,
+      resourceUpdateProgress: state.resourceUpdateProgress,
       resourceUpdateError: state.resourceUpdateError,
       setResourceUpdateStatus: state.setResourceUpdateStatus,
       setResourceUpdateInfo: state.setResourceUpdateInfo,
+      setResourceUpdateProgress: state.setResourceUpdateProgress,
       setResourceUpdateError: state.setResourceUpdateError,
     })),
   );
@@ -42,6 +47,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
   /** 打开弹窗后拉取 manifest；与「自动检查」解耦，避免无信息时白屏 */
   const [manifestPhase, setManifestPhase] = useState<'loading' | 'ready'>('loading');
   const [manifestError, setManifestError] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   // 递增请求序号，防止旧请求结果覆盖新请求状态
   const checkSeqRef = useRef(0);
 
@@ -132,18 +138,30 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
 
     setResourceUpdateStatus('downloading');
     setResourceUpdateError(null);
+    setResourceUpdateProgress(null);
+    setDownloadUrl(null);
 
     try {
-      setResourceUpdateStatus('installing');
       const st = useAppStore.getState();
       const mirrorPrefixes = getResourceUpdateMirrorPrefixList({
         resourceUpdateUseGithubMirrors: st.resourceUpdateUseGithubMirrors,
         resourceUpdateMirrorPrefix: st.resourceUpdateMirrorPrefix,
       });
-      await applyResourceUpdate(resourceUpdateInfo.downloadUrl, resourceUpdateInfo, mirrorPrefixes);
+      await applyResourceUpdate(
+        resourceUpdateInfo.downloadUrl,
+        resourceUpdateInfo,
+        mirrorPrefixes,
+        (progress) => {
+          setDownloadUrl(progress.url);
+          setResourceUpdateProgress({
+            downloadedSize: progress.downloadedSize,
+            totalSize: progress.totalSize,
+            speed: progress.speed,
+            progress: progress.progress,
+          });
+        },
+      );
       setResourceUpdateStatus('completed');
-
-      // 重新加载 interface.json
       log.info('资源更新完成，重新加载 interface...');
       const result = await autoLoadInterface();
       const store = useAppStore.getState();
@@ -160,7 +178,7 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
       setResourceUpdateStatus('error');
       setResourceUpdateError(err instanceof Error ? err.message : String(err));
     }
-  }, [resourceUpdateInfo, setResourceUpdateStatus, setResourceUpdateError]);
+  }, [resourceUpdateInfo, setResourceUpdateStatus, setResourceUpdateError, setResourceUpdateProgress]);
 
   const isUpdating =
     resourceUpdateStatus === 'downloading' || resourceUpdateStatus === 'installing';
@@ -291,15 +309,30 @@ export function ResourceUpdateModal({ onClose }: ResourceUpdateModalProps) {
               </>
             )}
 
-          {/* 更新中 */}
-          {isUpdating && (
+          {/* 下载中 */}
+          {resourceUpdateStatus === 'downloading' && (
+            <div className="py-4 space-y-3">
+              <DownloadProgressBar
+                downloadStatus="downloading"
+                downloadProgress={resourceUpdateProgress}
+                showActions={false}
+              />
+              {downloadUrl && (
+                <p
+                  className="text-xs text-text-muted break-all select-all"
+                  title={downloadUrl}
+                >
+                  {downloadUrl}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 安装中 */}
+          {resourceUpdateStatus === 'installing' && (
             <div className="flex flex-col items-center gap-3 py-4">
               <Loader2 className="w-8 h-8 animate-spin text-accent" />
-              <p className="text-text-primary">
-                {resourceUpdateStatus === 'downloading'
-                  ? t('resourceUpdate.downloading')
-                  : t('resourceUpdate.installing')}
-              </p>
+              <p className="text-text-primary">{t('resourceUpdate.installing')}</p>
             </div>
           )}
 

@@ -2,6 +2,7 @@
 // 封装 Tauri 命令调用，提供前端友好的 API
 
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { loggers } from '@/utils/logger';
 import { isTauri } from '@/utils/paths';
 
@@ -94,18 +95,40 @@ export async function checkResourceUpdate(
   }
 }
 
+/** 资源下载进度事件 */
+export interface ResourceUpdateProgressEvent {
+  url: string;
+  downloadedSize: number;
+  totalSize: number;
+  speed: number;
+  progress: number;
+}
+
 /**
  * 应用资源更新
  * @param downloadUrl 资源包下载 URL
  * @param manifest manifest 内容（用于更新本地 .manifest.json）
+ * @param onProgress 下载进度回调
  */
 export async function applyResourceUpdate(
   downloadUrl: string,
   manifest: object,
   mirrorPrefixes: string[],
+  onProgress?: (progress: ResourceUpdateProgressEvent) => void,
 ): Promise<void> {
   log.info('应用资源更新:', downloadUrl);
+
+  let unlisten: (() => void) | undefined;
+
   try {
+    // 监听 Rust 端的下载进度事件
+    unlisten = await listen<ResourceUpdateProgressEvent>(
+      'resource-update-progress',
+      (event) => {
+        onProgress?.(event.payload);
+      },
+    );
+
     await invoke('apply_resource_update', {
       downloadUrl,
       manifest,
@@ -115,5 +138,7 @@ export async function applyResourceUpdate(
   } catch (err) {
     log.error('应用资源更新失败:', err);
     throw err;
+  } finally {
+    unlisten?.();
   }
 }
