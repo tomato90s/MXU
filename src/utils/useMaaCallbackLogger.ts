@@ -22,6 +22,9 @@ import type { FocusTemplate, FocusDisplayChannel } from '@/types/interface';
 
 const log = loggers.app;
 
+const AGENT_LOG_FLOOD_WINDOW_MS = 2000;
+const AGENT_LOG_FLOOD_THRESHOLD = 15;
+
 // 每次会话只请求一次通知权限，避免多条 focus 消息重复弹权限弹窗
 let focusNotificationPermissionRequested = false;
 
@@ -548,35 +551,128 @@ function handleCallback(
  * 监听 Agent 输出事件
  */
 export function useMaaAgentLogger() {
+  const { t } = useTranslation();
   const { addLog } = useAppStore();
   const unlistenRef = useRef<(() => void) | null>(null);
+  const agentFloodStateRef = useRef<
+    Map<
+      string,
+      {
+        recentTimestamps: number[];
+        floodSuppressed: boolean;
+        recoveryTimer: ReturnType<typeof setTimeout> | null;
+        warningEmitted: boolean;
+      }
+    >
+  >(new Map());
+
+  const pruneAgentFloodWindow = (timestamps: number[], now: number): number[] =>
+    timestamps.filter((timestamp) => now - timestamp < AGENT_LOG_FLOOD_WINDOW_MS);
+
+  const ensureAgentFloodState = (instanceId: string) => {
+    const existing = agentFloodStateRef.current.get(instanceId);
+    if (existing) return existing;
+
+    const created = {
+      recentTimestamps: [] as number[],
+      floodSuppressed: false,
+      recoveryTimer: null as ReturnType<typeof setTimeout> | null,
+      warningEmitted: false,
+    };
+    agentFloodStateRef.current.set(instanceId, created);
+    return created;
+  };
+
+  const clearAgentRecoveryTimer = (batch: {
+    recoveryTimer: ReturnType<typeof setTimeout> | null;
+  }) => {
+    if (batch.recoveryTimer !== null) {
+      clearTimeout(batch.recoveryTimer);
+      batch.recoveryTimer = null;
+    }
+  };
+
+  const scheduleAgentRecoveryCheck = (instanceId: string) => {
+    const batch = agentFloodStateRef.current.get(instanceId);
+    if (!batch) return;
+
+    clearAgentRecoveryTimer(batch);
+    batch.recoveryTimer = setTimeout(() => {
+      const currentBatch = agentFloodStateRef.current.get(instanceId);
+      if (!currentBatch) return;
+
+      const now = Date.now();
+      currentBatch.recentTimestamps = pruneAgentFloodWindow(currentBatch.recentTimestamps, now);
+
+      if (currentBatch.recentTimestamps.length < AGENT_LOG_FLOOD_THRESHOLD) {
+        if (currentBatch.floodSuppressed) {
+          currentBatch.floodSuppressed = false;
+          currentBatch.warningEmitted = false;
+          addLog(instanceId, {
+            type: 'warning',
+            message: t('logs.messages.agentLogFloodRecovered'),
+          });
+        }
+      } else {
+        scheduleAgentRecoveryCheck(instanceId);
+      }
+    }, AGENT_LOG_FLOOD_WINDOW_MS);
+  };
+
+  const emitAgentLog = (instanceId: string, mergedLine: string) => {
+    resolveFocusContent(mergedLine, {} as MaaCallbackDetails & Record<string, unknown>, instanceId)
+      .then((resolved) => {
+        addLog(instanceId, {
+          type: 'agent',
+          message: resolved.message,
+          html: resolved.html,
+        });
+      })
+      .catch((err) => {
+        log.warn('Failed to resolve agent content:', err);
+        addLog(instanceId, { type: 'agent', message: mergedLine });
+      });
+  };
 
   useEffect(() => {
     let cancelled = false;
 
-    const handleAgentOutput = (instance_id: string, _stream: string, line: string) => {
+    const handleAgentOutput = (instanceId: string, _stream: string, line: string) => {
       if (cancelled) return;
 
-      resolveFocusContent(line, {} as MaaCallbackDetails & Record<string, unknown>, instance_id)
-        .then((resolved) => {
-          if (cancelled) return;
-          addLog(instance_id, {
-            type: 'agent',
-            message: resolved.message,
-            html: resolved.html,
+      const state = ensureAgentFloodState(instanceId);
+      const now = Date.now();
+      state.recentTimestamps = pruneAgentFloodWindow(state.recentTimestamps, now);
+
+      if (state.floodSuppressed) {
+        scheduleAgentRecoveryCheck(instanceId);
+        return;
+      }
+
+      state.recentTimestamps.push(now);
+      if (state.recentTimestamps.length >= AGENT_LOG_FLOOD_THRESHOLD) {
+        state.floodSuppressed = true;
+        if (!state.warningEmitted) {
+          state.warningEmitted = true;
+          addLog(instanceId, {
+            type: 'warning',
+            message: t('logs.messages.agentLogFloodWarning'),
           });
-        })
-        .catch((err) => {
-          log.warn('Failed to resolve agent content:', err);
-          if (cancelled) return;
-          addLog(instance_id, { type: 'agent', message: line });
-        });
+        }
+        scheduleAgentRecoveryCheck(instanceId);
+        return;
+      }
+
+      emitAgentLog(instanceId, line);
+
+      if (state.recentTimestamps.length > 0) {
+        scheduleAgentRecoveryCheck(instanceId);
+      }
     };
 
     const setupListener = async () => {
       try {
         if (isTauri()) {
-          // Tauri WebView：监听 Tauri 事件
           const { listen } = await import('@tauri-apps/api/event');
           const unlisten = await listen<{ instance_id: string; stream: string; line: string }>(
             'maa-agent-output',
@@ -592,7 +688,6 @@ export function useMaaAgentLogger() {
             unlistenRef.current = unlisten;
           }
         } else {
-          // 浏览器：通过 WebSocket 接收
           const unlisten = wsService.onAgentOutput(handleAgentOutput);
           if (cancelled) {
             unlisten();
@@ -613,6 +708,11 @@ export function useMaaAgentLogger() {
         unlistenRef.current();
         unlistenRef.current = null;
       }
+
+      for (const batch of agentFloodStateRef.current.values()) {
+        clearAgentRecoveryTimer(batch);
+      }
+      agentFloodStateRef.current.clear();
     };
-  }, [addLog]);
+  }, [addLog, t]);
 }

@@ -163,7 +163,21 @@ impl AppConfigState {
         let content =
             serde_json::to_string_pretty(&config).map_err(|e| format!("序列化配置失败: {}", e))?;
 
-        std::fs::write(&config_path, content).map_err(|e| format!("写入配置文件失败: {}", e))?;
+        // 原子写：先写到 .tmp，再 rename 覆盖正式文件。
+        // 与前端 configService.ts 保持一致，避免进程在写入中途被杀
+        // （如自动更新触发的 Tauri relaunch）时把配置文件截断为 0 字节。
+        // std::fs::rename 在 Windows 上走 MoveFileExW(MOVEFILE_REPLACE_EXISTING)，
+        // 在 Unix 上是原子的 rename(2)，同文件系统内可保证原子替换。
+        let tmp_path = config_path.with_extension("json.tmp");
+        std::fs::write(&tmp_path, content).map_err(|e| {
+            // 清理半成品 .tmp，避免遗留
+            let _ = std::fs::remove_file(&tmp_path);
+            format!("写入临时配置文件失败: {}", e)
+        })?;
+        if let Err(e) = std::fs::rename(&tmp_path, &config_path) {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(format!("重命名配置文件失败: {}", e));
+        }
 
         *self.config.lock().unwrap() = config;
         log::debug!("AppConfigState: config saved to {:?}", config_path);

@@ -57,8 +57,8 @@ export default {
     theme: '主题',
     themeLight: '浅色',
     themeDark: '深色',
-    accentColor: '强调色',
     themeSystem: '系统',
+    accentColor: '强调色',
     showOptionPreview: '显示选项预览',
     showOptionPreviewHint: '在任务列表中显示选项的快捷预览信息',
     openLogDir: '打开日志目录',
@@ -146,7 +146,7 @@ export default {
       argsLabel: '附加参数',
       argsPlaceholder: '输入附加参数（可选）',
       waitLabel: '等待退出',
-      waitDescription: '禁用时启动进程后立即继续；启用时等待进程退出后再继续作',
+      waitDescription: '禁用时启动进程后立即继续；启用时等待进程退出后再继续工作',
       waitYes: '等待程序退出后继续',
       waitNo: '启动后立即继续',
       skipLabel: '已运行时跳过',
@@ -224,6 +224,7 @@ export default {
       noDeviceFound: '未搜索到任何设备',
       noWindowFound: '未搜索到任何窗口',
       connectFailed: '自动连接失败',
+      retryConnect: '连接失败，第 {{attempt}} 次重试...',
       autoSelectedDevice:
         '尚未手动选择过设备，已自动匹配到「{{name}}」。如需更换，请在连接设置中手动选择，下次将记住您的选择。',
       autoSelectedWindow:
@@ -430,17 +431,17 @@ export default {
   logs: {
     title: '运行日志',
     clear: '清空',
-    autoClearOnLaunch: '启动时自动清理',
     autoscroll: '自动滚动',
     noLogs: '暂无日志',
     copyAll: '复制全部',
+    showMoreLogs: '展示更多日志',
     expand: '展开上方面板',
     collapse: '折叠上方面板',
     scrollToLogs: '查看日志',
     // 日志消息
     messages: {
       // 连接消息
-      connecting: '正在连接{{target}} ...',
+      connecting: '正在连接{{target}}...',
       connected: '{{target}}连接成功:',
       connectFailed: '{{target}}连接失败:',
       targetDevice: '设备',
@@ -463,14 +464,17 @@ export default {
       agentConnected: 'Agent 已连接',
       agentDisconnected: 'Agent 已断开',
       agentFailed: 'Agent 启动失败',
+      agentLogFloodWarning:
+        'Agent 处于日志风暴状态，为避免性能问题已暂停显示日志，完整日志可在本地日志文件中查看',
+      agentLogFloodRecovered: 'Agent 日志风暴状态已缓解',
       // 快捷键
-      hotkeyDetected: '检测到快捷键：{{combo}}（{{action}}）',
+      hotkeyDetected: '检测到快捷键: {{combo}}（{{action}}）',
       hotkeyActionStart: '开始任务',
       hotkeyActionStop: '停止任务',
-      hotkeyStartSuccess: '快捷键开始任务：成功',
-      hotkeyStartFailed: '快捷键开始任务：失败',
-      hotkeyStopSuccess: '快捷键停止任务：成功',
-      hotkeyStopFailed: '快捷键停止任务：失败',
+      hotkeyStartSuccess: '已通过快捷键开始任务：',
+      hotkeyStartFailed: '未能通过快捷键开始任务',
+      hotkeyStopSuccess: '已通过快捷键停止任务',
+      hotkeyStopFailed: '未能通过快捷键停止任务',
     },
   },
 

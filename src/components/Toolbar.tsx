@@ -334,12 +334,12 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
 
       try {
         let needsReconnect = false;
+        let shouldDelayAfterAdbConnected = false;
 
         // 收集所有启用且有程序路径的前置程序，按列表顺序执行
         const allPreActions = (targetInstance.preActions ?? []).filter(
           (a) => a.enabled && a.program.trim(),
         );
-        let hasNonWaitForExit = false;
         let preActionControlStarted = false;
 
         if (allPreActions.length > 0) {
@@ -392,14 +392,11 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
                   message: t('action.preActionCompletedNamed', { name: processName }),
                 });
               }
-
-              if (!(preAction.waitForExit ?? true)) {
-                hasNonWaitForExit = true;
-              }
             }
 
-            // 所有前置程序执行完毕后，如果有任何非等待退出的动作，则等待设备/窗口就绪
-            if (hasNonWaitForExit && controller) {
+            // 所有前置程序执行完毕后，等待设备/窗口就绪再连接
+            const shouldWaitAfterPreActions = !!controller;
+            if (shouldWaitAfterPreActions && controller) {
               const controllerType = controller.type;
               const isWindowType = controllerType === 'Win32' || controllerType === 'Gamepad';
               log.info(`实例 ${targetInstance.name}: 等待${isWindowType ? '窗口' : '设备'}就绪...`);
@@ -519,17 +516,17 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
                   }
                 }
 
-                const delaySec = useAppStore.getState().preActionConnectDelaySec ?? 5;
-                if (delaySec > 0) {
-                  log.info(`实例 ${targetInstance.name}: 等待 ${delaySec} 秒后再连接...`);
-                  addLog(targetId, {
-                    type: 'info',
-                    message: t('action.preActionConnectDelay', { seconds: delaySec }),
-                  });
-                  await waitWithStopCheck(delaySec * 1000, targetId);
-                }
-
                 needsReconnect = true;
+                // 设备/窗口已就绪，先等待稳定再连接
+                const settleSec = useAppStore.getState().preActionConnectDelaySec ?? 5;
+                if (settleSec > 0) {
+                  log.info(
+                    `实例 ${targetInstance.name}: ${isWindowType ? '窗口' : '设备'}已就绪，等待 ${settleSec} 秒稳定后连接...`,
+                  );
+                  await waitWithStopCheck(settleSec * 1000, targetId);
+                }
+                // 连接成功后再等待，避免”连接前固定等待”导致时序不稳定
+                shouldDelayAfterAdbConnected = true;
               } else {
                 log.warn(`实例 ${targetInstance.name}: 等待${isWindowType ? '窗口' : '设备'}超时`);
                 addLog(targetId, {
@@ -783,128 +780,156 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
 
           onPhaseChange?.('connecting');
 
-          // 提前注册回调收集器，await 完成后再发起连接，避免竞态
-          const collectedCallbacks: Array<{ message: string; details: { ctrl_id?: number } }> = [];
-          const unsubscribe = await maaService.onCallback((message, details) => {
-            if (
-              message === 'Controller.Action.Succeeded' ||
-              message === 'Controller.Action.Failed'
-            ) {
-              collectedCallbacks.push({ message, details });
-            }
-          });
+          const maxRetries = 3;
+          let connectResult = false;
 
-          let ctrlId: number;
-          try {
-            ctrlId = await maaService.connectController(targetId, config);
-          } catch (err) {
-            unsubscribe();
-            throw err;
-          }
-
-          // 注册 ctrl_id 与设备名/类型的映射
-          registerCtrlIdName(ctrlId, deviceName, targetType);
-
-          // 等待连接完成（同时监听 maa-callback 和 state-changed 两条路径）
-          const connectResult = await new Promise<boolean>((resolve) => {
-            let resolved = false;
-
-            const handleSuccess = () => {
-              if (resolved) return;
-              resolved = true;
-              clearTimeout(timeout);
-              unsubscribe();
-              unlistenCb?.();
-              unlistenState?.();
-              setInstanceConnectionStatus(targetId, 'Connected');
-              resolve(true);
-            };
-
-            const handleFailure = () => {
-              if (resolved) return;
-              resolved = true;
-              clearTimeout(timeout);
-              unsubscribe();
-              unlistenCb?.();
-              unlistenState?.();
-              resolve(false);
-            };
-
-            const timeout = setTimeout(() => {
-              if (!resolved) {
-                log.warn(`实例 ${targetInstance.name}: 连接超时`);
-                handleFailure();
-              }
-            }, 30000);
-
-            // 路径 1：继续监听新的 maa-callback（Controller.Action.Succeeded/Failed）
-            let unlistenCb: (() => void) | undefined;
-            // 路径 2：监听 state-changed（兜底：后端已广播 connected 但 Action.Succeeded 可能因竞态丢失）
-            // Tauri 桌面端走 app.emit() → listen()，WebSocket 端走 wsService
-            let unlistenState: (() => void) | undefined;
-
-            // 检查已收集的回调（注册监听器在 connectController 之前已完成）
-            const match = collectedCallbacks.find((cb) => cb.details.ctrl_id === ctrlId);
-            if (match) {
-              if (match.message === 'Controller.Action.Succeeded') {
-                handleSuccess();
-              } else {
-                handleFailure();
-              }
-              return;
+          for (let retry = 0; retry < maxRetries && !connectResult; retry++) {
+            if (retry > 0) {
+              throwIfPreActionStopped(targetId);
+              log.info(`实例 ${targetInstance.name}: 连接失败，第 ${retry} 次重试...`);
+              addLog(targetId, {
+                type: 'info',
+                message: t('taskList.autoConnect.retryConnect', { attempt: retry }),
+              });
+              await waitWithStopCheck(2000, targetId);
             }
 
-            maaService
-              .onCallback((message, details) => {
+            // 提前注册回调收集器，await 完成后再发起连接，避免竞态
+            const collectedCallbacks: Array<{ message: string; details: { ctrl_id?: number } }> =
+              [];
+            const unsubscribe = await maaService.onCallback((message, details) => {
+              if (
+                message === 'Controller.Action.Succeeded' ||
+                message === 'Controller.Action.Failed'
+              ) {
+                collectedCallbacks.push({ message, details });
+              }
+            });
+
+            let ctrlId: number;
+            try {
+              ctrlId = await maaService.connectController(targetId, config);
+            } catch (err) {
+              unsubscribe();
+              throw err;
+            }
+
+            // 注册 ctrl_id 与设备名/类型的映射
+            registerCtrlIdName(targetId, ctrlId, deviceName, targetType);
+
+            // 等待连接完成（同时监听 maa-callback 和 state-changed 两条路径）
+            connectResult = await new Promise<boolean>((resolve) => {
+              let resolved = false;
+
+              const handleSuccess = () => {
                 if (resolved) return;
-                if (details.ctrl_id !== ctrlId) return;
-                if (message === 'Controller.Action.Succeeded') {
-                  handleSuccess();
-                } else if (message === 'Controller.Action.Failed') {
+                resolved = true;
+                clearTimeout(timeout);
+                unsubscribe();
+                unlistenCb?.();
+                unlistenState?.();
+                setInstanceConnectionStatus(targetId, 'Connected');
+                resolve(true);
+              };
+
+              const handleFailure = () => {
+                if (resolved) return;
+                resolved = true;
+                clearTimeout(timeout);
+                unsubscribe();
+                unlistenCb?.();
+                unlistenState?.();
+                resolve(false);
+              };
+
+              const timeout = setTimeout(() => {
+                if (!resolved) {
+                  log.warn(`实例 ${targetInstance.name}: 连接超时`);
                   handleFailure();
                 }
-              })
-              .then((cb) => {
-                if (!resolved) {
-                  unlistenCb = cb;
-                } else {
-                  cb();
-                }
-              })
-              .catch((err) => {
-                log.error(`实例 ${targetInstance.name}: 注册 maa-callback 监听失败:`, err);
-                handleFailure();
-              });
-            const handleStateChanged = (instanceId: string, kind: string) => {
-              if (resolved) return;
-              if (instanceId === targetId && kind === 'connected') {
-                log.info(`实例 ${targetInstance.name}: 通过 state-changed 兜底判定连接成功`);
-                handleSuccess();
-              }
-            };
+              }, 30000);
 
-            if (isTauri()) {
-              import('@tauri-apps/api/event')
-                .then(({ listen }) =>
-                  listen<{ instance_id: string; kind: string }>('state-changed', (event) =>
-                    handleStateChanged(event.payload.instance_id, event.payload.kind),
-                  ),
-                )
-                .then((dispose) => {
-                  if (resolved) dispose();
-                  else unlistenState = dispose;
+              // 路径 1：继续监听新的 maa-callback（Controller.Action.Succeeded/Failed）
+              let unlistenCb: (() => void) | undefined;
+              // 路径 2：监听 state-changed（兜底：后端已广播 connected 但 Action.Succeeded 可能因竞态丢失）
+              // Tauri 桌面端走 app.emit() → listen()，WebSocket 端走 wsService
+              let unlistenState: (() => void) | undefined;
+
+              // 检查已收集的回调（注册监听器在 connectController 之前已完成）
+              const match = collectedCallbacks.find((cb) => cb.details.ctrl_id === ctrlId);
+              if (match) {
+                if (match.message === 'Controller.Action.Succeeded') {
+                  handleSuccess();
+                } else {
+                  handleFailure();
+                }
+                return;
+              }
+
+              maaService
+                .onCallback((message, details) => {
+                  if (resolved) return;
+                  if (details.ctrl_id !== ctrlId) return;
+                  if (message === 'Controller.Action.Succeeded') {
+                    handleSuccess();
+                  } else if (message === 'Controller.Action.Failed') {
+                    handleFailure();
+                  }
+                })
+                .then((cb) => {
+                  if (!resolved) {
+                    unlistenCb = cb;
+                  } else {
+                    cb();
+                  }
                 })
                 .catch((err) => {
-                  log.warn('注册 state-changed 监听失败:', err);
+                  log.error(`实例 ${targetInstance.name}: 注册 maa-callback 监听失败:`, err);
+                  handleFailure();
                 });
-            } else {
-              unlistenState = onStateChanged(handleStateChanged);
-            }
-          });
+              const handleStateChanged = (instanceId: string, kind: string) => {
+                if (resolved) return;
+                if (instanceId === targetId && kind === 'connected') {
+                  log.info(`实例 ${targetInstance.name}: 通过 state-changed 兜底判定连接成功`);
+                  handleSuccess();
+                }
+              };
+
+              if (isTauri()) {
+                import('@tauri-apps/api/event')
+                  .then(({ listen }) =>
+                    listen<{ instance_id: string; kind: string }>('state-changed', (event) =>
+                      handleStateChanged(event.payload.instance_id, event.payload.kind),
+                    ),
+                  )
+                  .then((dispose) => {
+                    if (resolved) dispose();
+                    else unlistenState = dispose;
+                  })
+                  .catch((err) => {
+                    log.warn('注册 state-changed 监听失败:', err);
+                  });
+              } else {
+                unlistenState = onStateChanged(handleStateChanged);
+              }
+            });
+          }
 
           if (!connectResult) {
-            log.warn(`实例 ${targetInstance.name}: 连接设备失败`);
+            log.warn(`实例 ${targetInstance.name}: 连接设备失败（已重试 ${maxRetries - 1} 次）`);
             return false;
+          }
+
+          if (shouldDelayAfterAdbConnected) {
+            const delaySec = useAppStore.getState().preActionConnectDelaySec ?? 5;
+            if (delaySec > 0) {
+              log.info(`实例 ${targetInstance.name}: 连接成功，等待 ${delaySec} 秒后继续...`);
+              addLog(targetId, {
+                type: 'info',
+                message: t('action.preActionConnectDelay', { seconds: delaySec }),
+              });
+              await waitWithStopCheck(delaySec * 1000, targetId);
+            }
           }
         }
 

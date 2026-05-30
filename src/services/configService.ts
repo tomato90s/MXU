@@ -146,7 +146,8 @@ export async function saveConfig(
   log.debug('保存配置, 路径:', configPath);
 
   try {
-    const { writeTextFile, mkdir, exists, readTextFile } = await import('@tauri-apps/plugin-fs');
+    const { writeTextFile, mkdir, exists, readTextFile, rename, remove } =
+      await import('@tauri-apps/plugin-fs');
 
     // 确保 config 目录存在
     if (!(await exists(configDir))) {
@@ -174,7 +175,26 @@ export async function saveConfig(
     }
 
     const content = JSON.stringify(config, null, 2);
-    await writeTextFile(configPath, content);
+    // 原子写：先写到 .tmp，再 rename 覆盖正式文件。
+    // 这样即使进程在写入中途被杀（典型场景：自动更新后 Tauri relaunch
+    // 触发 beforeunload，writeTextFile 已经把目标文件截断为 0 字节但内容还没
+    // 落盘），目标文件也只会停留在上一份完整内容，不会出现空 / 损坏的
+    // mxu-{projectName}.json。
+    const tempPath = configPath + '.tmp';
+    try {
+      await writeTextFile(tempPath, content);
+      await rename(tempPath, configPath);
+    } catch (err) {
+      // 写入或重命名失败时清理半成品 .tmp，避免遗留垃圾
+      try {
+        if (await exists(tempPath)) {
+          await remove(tempPath);
+        }
+      } catch (cleanupErr) {
+        log.debug('清理临时配置文件失败（忽略）:', cleanupErr);
+      }
+      throw err;
+    }
     log.info('配置保存成功');
 
     // 通知 Rust 后端更新内存缓存并广播 config-changed 给所有其他客户端
