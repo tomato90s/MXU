@@ -238,6 +238,45 @@ fn is_image_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+fn has_extension(path: &Path, extensions: &[&str]) -> bool {
+    path.extension()
+        .map(|ext| {
+            let ext_lower = ext.to_string_lossy().to_lowercase();
+            extensions.iter().any(|e| ext_lower == *e)
+        })
+        .unwrap_or(false)
+}
+
+/// 收集 debug 目录下各子文件夹内以指定后缀结尾的文件（递归）
+/// 压缩包内路径保留子文件夹层级，例如 on_error/xxx.json
+fn collect_debug_subdir_files(
+    debug_dir: &Path,
+    extensions: &[&str],
+) -> Result<Vec<ExportEntry>, String> {
+    let entries = std::fs::read_dir(debug_dir)
+        .map_err(|e| format!("读取日志目录失败 [{}]: {}", debug_dir.display(), e))?;
+
+    let mut files = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(dir_name) = path.file_name().map(|n| n.to_string_lossy().to_string()) else {
+            continue;
+        };
+
+        for export in collect_files_recursively(&path, &dir_name)? {
+            if has_extension(&export.source_path, extensions) {
+                files.push(export);
+            }
+        }
+    }
+
+    files.sort_by(|a, b| a.archive_name.cmp(&b.archive_name));
+    Ok(files)
+}
+
 pub fn resolve_local_file_path(filename: &str) -> Result<PathBuf, String> {
     let exe_dir = get_exe_directory()?;
     let file_path = normalize_path(&exe_dir.join(filename).to_string_lossy());
@@ -597,6 +636,9 @@ pub fn export_logs(
 
     let config_dir = data_dir.join("config");
     regular_entries.extend(collect_files_recursively(&config_dir, "config")?);
+
+    // debug 各子文件夹下以 .log / .json 结尾的文件（如 on_error/vision 等产生的文本记录）
+    regular_entries.extend(collect_debug_subdir_files(&debug_dir, &["log", "json"])?);
 
     let mut selected_images = Vec::new();
     let mut archive_measurer = ArchiveMeasurer::new();
